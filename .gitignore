@@ -1,0 +1,23 @@
+# ───────────────────────────────
+# Python (img-server)
+# ───────────────────────────────
+img-server/venv/
+img-server/__pycache__/
+img-server/**/__pycache__/
+img-server/uploads/
+img-server/.env
+
+# ───────────────────────────────
+# C++ 빌드 산출물 (tcp-server)
+# ───────────────────────────────
+tcp-server/build/
+
+# ───────────────────────────────
+# OS / 에디터
+# ───────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
