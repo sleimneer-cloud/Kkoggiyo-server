@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import FileResponse
 from services.image_service import (
-    save_image, update_menu_image, verify_store_owner
+    save_image, update_menu_image, verify_store_owner, UPLOAD_DIR
 )
 from schemas import ImageUploadResponse, ErrorResponse
 from db import get_db
@@ -9,7 +9,7 @@ import os
 
 router = APIRouter(tags=["메뉴 이미지"])
 
-UPLOAD_DIR = "uploads"
+
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 

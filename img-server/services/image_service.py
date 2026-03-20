@@ -10,6 +10,9 @@ async def save_image(file: UploadFile, content: bytes) -> str:
     ext = os.path.splitext(file.filename)[1].lower()
     unique_name = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join(UPLOAD_DIR, unique_name)
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)  # uploads 디렉토리가 없으면 생성
+
     with open(save_path, "wb") as f:
         f.write(content)
     return f"/images/{unique_name}"

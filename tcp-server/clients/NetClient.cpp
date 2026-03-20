@@ -46,7 +46,7 @@ bool NetClient::sendPacket(int32_t type, const nlohmann::json &payload)
     nlohmann::json msg = payload;
     msg["type"] = type;
     std::string body = msg.dump();
-    int32_t len = static_cast<int32_t>(body.size());
+    int32_t len = htonl(static_cast<int32_t>(body.size())); // ← htonl 추가
 
     ssize_t n = ::send(sock_, &len, sizeof(int32_t), 0);
     if (n != static_cast<ssize_t>(sizeof(int32_t)))
@@ -66,6 +66,8 @@ std::pair<int32_t, nlohmann::json> NetClient::recvPacket()
     ssize_t n = ::recv(sock_, &payloadSize, sizeof(int32_t), 0);
     if (n != static_cast<ssize_t>(sizeof(int32_t)))
         return {-1, nullptr};
+
+    payloadSize = ntohl(static_cast<uint32_t>(payloadSize)); // ← ntohl 추가
 
     if (payloadSize < 0 || payloadSize > 1024 * 1024)
         return {-1, nullptr};

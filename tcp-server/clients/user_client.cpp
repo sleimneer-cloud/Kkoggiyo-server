@@ -29,7 +29,7 @@ static void recvThread(NetClient *client)
     while (g_running && client->isConnected())
     {
         auto [type, j] = client->recvPacket();
-        if (type < 0)
+        if (type < 0 || j.is_null())
             break;
 
         if (type == SC_CHAT_NOTI)
@@ -110,6 +110,11 @@ int main()
             }
 
             auto [resType, resBody] = client.recvPacket();
+            if (resType < 0 || resBody.is_null())
+            {
+                std::cerr << "응답 수신 실패\n";
+                break;
+            }
             std::cout << "[서버 응답] " << resBody.value("message", "") << "\n\n";
         }
         else if (choice == "2")
@@ -135,6 +140,12 @@ int main()
             }
 
             auto [resType, resBody] = client.recvPacket();
+
+            if (resType < 0 || resBody.is_null())
+            {
+                std::cerr << "응답 수신 실패\n";
+                break;
+            }
 
             if (resType == SC_LOGIN_RES && resBody.value("status", "") == "success")
             {
