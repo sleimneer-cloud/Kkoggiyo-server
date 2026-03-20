@@ -13,6 +13,7 @@ class PacketHandler
 {
 public:
     static void sendPacket(int target_fd, PacketType type, const json &payload);
+    static void removeFd(int fd);
 
 private:
     static std::mutex &getFdMutex(int fd);

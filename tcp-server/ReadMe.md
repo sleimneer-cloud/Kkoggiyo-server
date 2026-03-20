@@ -315,11 +315,10 @@
 
 ## 🟢 개선 사항
 
-- [ ] **PacketHandler fd 정리** — 클라이언트 연결이 끊길 때 `fdMutexMap_`에서 해당 fd의 mutex를 제거하는 로직이 없어 메모리가 계속 누적됩니다. `ConnectionManager::disconnectClient()`에서 `PacketHandler::removeFd(fd)` 호출이 필요합니다.
+- [x] **PacketHandler fd 정리** — 클라이언트 연결이 끊길 때 `fdMutexMap_`에서 해당 fd의 mutex를 제거하는 로직이 없어 메모리가 계속 누적됩니다. `ConnectionManager::disconnectClient()`에서 `PacketHandler::removeFd(fd)` 호출이 필요합니다.
 
-- [ ] **WorkQueue PacketType 로그** — 현재 WorkQueue 로그에 `PacketType: unknown`으로 표시됩니다. `item.jsonStr`을 파싱해서 type 값을 출력하면 디버깅이 편해집니다.
+- [x] **WorkQueue PacketType 로그** — 현재 WorkQueue 로그에 `PacketType: unknown`으로 표시됩니다. `item.jsonStr`을 파싱해서 type 값을 출력하면 디버깅이 편해집니다.
 
-- [ ] **NetClient.hpp 주석 업데이트** — 아직 "8바이트 헤더 + JSON" 방식으로 설명이 남아있습니다.
 
 - [ ] **설정 파일 분리** — DB 접속 정보(IP, 비밀번호)가 `server.cpp`에 하드코딩되어 있습니다. `.env` 파일이나 config 구조체로 분리하는 것을 권장합니다.
   ```cpp

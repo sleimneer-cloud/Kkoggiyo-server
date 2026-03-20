@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "PacketHandler.hpp"
 #include "net/ConnectionManager.hpp"
 #include "SessionManager.hpp"
 
@@ -147,6 +148,7 @@ void ConnectionManager::disconnectClient(int client_fd)
 {
     std::cout << "[알림] 클라이언트 접속 종료. FD: " << client_fd << "\n";
     SessionManager::getInstance().removeSession(client_fd);
+    PacketHandler::removeFd(client_fd); // PacketHandler에서 해당 FD 제거 (세션 종료 시 필요)
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
     close(client_fd);
 }

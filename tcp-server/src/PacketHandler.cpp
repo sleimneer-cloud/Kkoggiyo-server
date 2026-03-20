@@ -32,3 +32,10 @@ void PacketHandler::sendPacket(int target_fd, PacketType type, const json &paylo
     else
         std::cout << "[경고] 송신 실패. FD: " << target_fd << " / 타입: " << (int)type << "\n";
 }
+
+void PacketHandler::removeFd(int fd)
+{
+    std::lock_guard<std::mutex> lock(mapMutex_);
+    fdMutexMap_.erase(fd);
+    std::cout << "[PacketHandler] FD: " << fd << " mutex 정리 완료.\n";
+}
