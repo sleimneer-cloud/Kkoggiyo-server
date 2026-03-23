@@ -18,6 +18,7 @@ find_package(CURL REQUIRED)
 add_executable(server
     src/server.cpp
     src/DBConnectionPool.cpp
+    src/DBHelper.cpp 
     src/net/ConnectionManager.cpp
     src/net/SocketIO.cpp
     src/router/MessageRouter.cpp

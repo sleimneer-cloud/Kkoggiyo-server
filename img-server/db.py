@@ -5,9 +5,9 @@ pool = None
 async def create_pool():
     global pool
     pool = await aiomysql.create_pool(
-        host="10.10.10.116",
+        host="10.10.10.124",
         port=3306,
-        user="HS",
+        user="DEV",
         password="1234",
         db="delivery",
         autocommit=True,
