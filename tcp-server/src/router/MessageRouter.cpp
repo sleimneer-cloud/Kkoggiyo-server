@@ -6,6 +6,7 @@
 #include "json.hpp"
 #include "handlers/AuthHandler.hpp"
 #include "handlers/ChatHandler.hpp"
+#include "handlers/OrderHandler.hpp"
 
 using json = nlohmann::json;
 
@@ -34,6 +35,15 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
         case PacketType::CS_CHAT_REQ:
             chatHandler_.handleChat(client_fd, j);
             break;
+        // ── 주문 관련 ─────────────────────────────────── ← 추가
+        case PacketType::CS_ORDER_REQ:    // 300
+        case PacketType::CS_ORDER_CANCEL: // 304
+        case PacketType::CS_ORDER_ACCEPT: // 305
+        case PacketType::CS_ORDER_PICKUP: // 306
+        case PacketType::CS_ORDER_DONE:   // 307
+            OrderHandler{}.handle(client_fd, msgType, j);
+            break;
+
         default:
             std::cout << "[경고] 알 수 없는 패킷 타입: " << msgType << "\n";
             break;

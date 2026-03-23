@@ -75,7 +75,7 @@ async def upload_menu_image(
     # ← 이 순서가 핵심: 파일을 저장하기 전에 메뉴가 존재하는지 확인해야
     #   DB 실패 시 저장된 파일이 고아(孤兒) 파일로 남는 문제를 방지할 수 있음
     await cur.execute(
-        "SELECT img_path FROM Menu WHERE menu_id = %s AND store_id = %s",
+        "SELECT img_path FROM menu WHERE menu_id = %s AND store_id = %s",
         (menu_id, store_id)
     )
     menu_row = await cur.fetchone()
@@ -119,7 +119,7 @@ menu_id에 해당하는 메뉴 이미지를 반환합니다.
 )
 async def get_menu_image(menu_id: int, cur=Depends(get_db)):
     await cur.execute(
-        "SELECT img_path FROM Menu WHERE menu_id = %s", (menu_id,)
+        "SELECT img_path FROM menu WHERE menu_id = %s", (menu_id,)
     )
     row = await cur.fetchone()
 
@@ -137,4 +137,8 @@ async def get_menu_image(menu_id: int, cur=Depends(get_db)):
             detail="파일이 서버에 존재하지 않습니다"
         )
 
-    return FileResponse(file_path)
+    # 🌟 수정된 부분: 브라우저 및 Swagger UI 캐싱 방지 헤더 추가
+    return FileResponse(
+        file_path,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )

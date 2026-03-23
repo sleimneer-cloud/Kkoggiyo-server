@@ -288,7 +288,7 @@
 
 ## 🔴 보안 (우선순위 높음)
 
-- [ ] **Prepared Statement 적용** — `CustomerAuthService`, `BossAuthService`의 SQL이 현재 문자열 직접 조합 방식이라 SQL Injection에 취약합니다.
+- [x] **Prepared Statement 적용** — `CustomerAuthService`, `BossAuthService`의 SQL이 현재 문자열 직접 조합 방식이라 SQL Injection에 취약합니다.
   ```cpp
   // 현재 (취약)
   "SELECT password FROM members WHERE user_id = '" + userId + "'"

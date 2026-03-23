@@ -29,6 +29,13 @@ add_executable(server
     src/repo/InMemoryUserRepository.cpp
     src/services/CustomerAuthService.cpp
     src/services/BossAuthService.cpp
+    src/services/OrderService.cpp
+    src/services/NotifyService.cpp
+    src/usecase/PlaceOrderUseCase.cpp
+    src/usecase/CancelOrderUseCase.cpp
+    src/usecase/AcceptOrderUseCase.cpp
+    src/usecase/UpdateStatusUseCase.cpp
+    src/handlers/OrderHandler.cpp
 )
 
 target_include_directories(server PRIVATE include)

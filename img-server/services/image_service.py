@@ -29,7 +29,7 @@ async def delete_old_image(img_path: str):
 async def update_menu_image(cur, menu_id: int, store_id: int, img_path: str, old_path: str = None):
     # router에서 이미 menu_id 존재 확인 및 old_path를 넘겨받으므로 여기서는 UPDATE만 수행
     await cur.execute(
-        "UPDATE Menu SET img_path = %s WHERE menu_id = %s AND store_id = %s",
+        "UPDATE menu SET img_path = %s WHERE menu_id = %s AND store_id = %s",
         (img_path, menu_id, store_id)
     )
 
@@ -42,9 +42,9 @@ async def verify_store_owner(cur, user_id: str, store_id: int) -> bool:
     await cur.execute(
         """
         SELECT s.store_id
-        FROM Store s
-        JOIN members m ON s.owner_id = m.user_id
-        WHERE s.store_id = %s AND m.user_id = %s AND m.role = 2
+        FROM store s
+        JOIN member m ON s.owner_id = m.member_id
+        WHERE s.store_id = %s AND m.member_id = %s AND m.role = 2
         """,
         (store_id, user_id)
     )
