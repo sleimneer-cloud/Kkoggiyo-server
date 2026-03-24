@@ -1,53 +1,68 @@
 #include "services/BossAuthService.hpp"
 #include <iostream>
-#include <mysql/mysql.h>
 #include "DBConnectionPool.h"
+#include "DBHelper.hpp"
+#include <crypt.h> // crypt() — bcrypt 검증 (링크: -lcrypt)
 
+// ---------------------------------------------------------
+// bcrypt 검증 유틸 (이 파일 내부에서만 사용)
+// ---------------------------------------------------------
+static bool bcryptVerify(const std::string &password, const std::string &hash)
+{
+    if (hash.empty()) return false;
+    const char *result = crypt(password.c_str(), hash.c_str());
+    return result && (hash == std::string(result));
+}
+
+// ---------------------------------------------------------
+// 로그인 로직
+// ---------------------------------------------------------
 bool BossAuthService::processLogin(int fd, const nlohmann::json &payload)
 {
     if (!payload.contains("userId") || !payload.contains("password"))
         return false;
 
-    std::string userId = payload["userId"];
-    std::string inputPw = payload["password"];
+    std::string userId  = payload["userId"];
+    std::string inputPw = payload["password"]; // 클라이언트 SHA256 해싱값
 
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
     if (!conn)
         return false;
 
-    std::string query =
-        "SELECT password FROM members WHERE user_id = '" + userId +
-        "' AND role = 2";
-
-    if (mysql_query(conn, query.c_str()))
-    {
-        std::cerr << "[BossAuthService] " << mysql_error(conn) << "\n";
-        DBConnectionPool::getInstance().releaseConnection(conn);
-        return false;
-    }
-
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (!res)
-    {
-        DBConnectionPool::getInstance().releaseConnection(conn);
-        return false;
-    }
+    std::string query = "SELECT password FROM member WHERE login_id = ? AND role = 2";
+    std::vector<std::string> params = {userId};
+    std::string dbPassword; // DB에 저장된 bcrypt 해시
 
     bool success = false;
-    MYSQL_ROW row = mysql_fetch_row(res);
-    if (row && std::string(row[0]) == inputPw)
+
+    if (DBHelper::executeSelectOneString(conn, query, params, dbPassword))
     {
-        std::cout << "[BossAuthService] 사장님 로그인 성공: " << userId << "\n";
-        success = true;
+        // ✅ 수정: == 단순 비교 → bcryptVerify로 검증
+        if (bcryptVerify(inputPw, dbPassword))
+        {
+            std::cout << "[BossAuthService] 사장님 로그인 성공: " << userId << "\n";
+            success = true;
+        }
+        else
+        {
+            std::cout << "[BossAuthService] 로그인 실패 (비밀번호 불일치): " << userId << "\n";
+        }
+    }
+    else
+    {
+        std::cout << "[BossAuthService] 로그인 실패 (존재하지 않는 아이디): " << userId << "\n";
     }
 
-    mysql_free_result(res);
     DBConnectionPool::getInstance().releaseConnection(conn);
     return success;
 }
 
+// ---------------------------------------------------------
+// 회원가입 로직
+// ---------------------------------------------------------
 bool BossAuthService::processRegister(const nlohmann::json &payload)
 {
     // TODO: 사장님 가입 구현
+    // CustomerAuthService::processRegister와 동일한 패턴으로 bcryptHash() 적용할 것
     return false;
 }

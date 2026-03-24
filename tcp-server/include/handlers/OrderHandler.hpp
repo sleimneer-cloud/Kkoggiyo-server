@@ -32,5 +32,6 @@ private:
     void handleCancel(int clientFd, const json &j);     // 304
     void handleAccept(int clientFd, const json &j);     // 305
     void handlePickup(int clientFd, const json &j);     // 306
-    void handleDone(int clientFd, const json &j);       // 307
+    void handleReady(int clientFd, const json &j);      // 307
+    void handleDone(int clientFd, const json &j);       // 308
 };

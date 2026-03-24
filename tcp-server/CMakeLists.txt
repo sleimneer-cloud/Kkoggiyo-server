@@ -31,6 +31,7 @@ add_executable(server
     src/services/BossAuthService.cpp
     src/services/OrderService.cpp
     src/services/NotifyService.cpp
+    src/services/RiderAuthService.cpp
     src/usecase/PlaceOrderUseCase.cpp
     src/usecase/CancelOrderUseCase.cpp
     src/usecase/AcceptOrderUseCase.cpp
@@ -39,7 +40,8 @@ add_executable(server
 )
 
 target_include_directories(server PRIVATE include)
-target_link_libraries(server PRIVATE Threads::Threads mariadb)
+target_link_libraries(server PRIVATE Threads::Threads mariadb crypt ssl crypto)
+
 
 
 # ==========================================

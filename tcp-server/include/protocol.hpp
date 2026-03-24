@@ -21,12 +21,14 @@ enum class PacketType : int32_t // 4바이트 정수형으로 저장
     // [주문 관련]
     CS_ORDER_REQ = 300,    // 고객 -> 서버: 주문 요청
     SC_ORDER_NOTI = 301,   // 서버 -> 가게/관리자: 새 주문 알림
-    CS_ORDER_ACCEPT = 302, // 가게 -> 서버: 주문 수락(조리시간 포함)
+    CS_ORDER_ACCEPT = 305, // 가게 -> 서버: 주문 수락(조리시간 포함)
     SC_ORDER_STATUS = 303, // 서버 -> 전체: 주문 상태 변경 알림
 
     CS_ORDER_CANCEL = 304,
     CS_ORDER_PICKUP = 306,
-    CS_ORDER_DONE = 307
+    CS_ORDER_READY = 307,
+    CS_ORDER_DONE = 308
+
 };
 
 // 3. 클라이언트 종류 (관리자, 고객, 가게, 라이더 구분용)

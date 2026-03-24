@@ -130,7 +130,7 @@ int main()
         // ── 이미지 업로드 ─────────────────────────────────
         else if (choice == "2")
         {
-            std::string filePath, tmp;
+            std::string filePath, tmp, ownerIdStr;
             int menuId, storeId;
 
             std::cout << "이미지 파일 경로: ";
@@ -142,13 +142,17 @@ int main()
             std::getline(std::cin, tmp);
             storeId = std::stoi(tmp);
 
-            std::string imgPath = HttpClient::uploadImage(userId, menuId, storeId, filePath);
+            // 추가된 부분: owner_id를 직접 입력받음
+            std::cout << "사장님 고유번호(owner_id, 예: 15): ";
+            std::getline(std::cin, ownerIdStr);
+
+            // userId 대신 ownerIdStr을 넘김
+            std::string imgPath = HttpClient::uploadImage(ownerIdStr, menuId, storeId, filePath);
             if (!imgPath.empty())
                 std::cout << "업로드 성공! 경로: " << imgPath << "\n";
             else
                 std::cout << "업로드 실패\n";
         }
-
         // ── 이미지 다운로드 ───────────────────────────────
         else if (choice == "3")
         {

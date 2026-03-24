@@ -1,15 +1,16 @@
 import aiomysql
+import os
 
 pool = None
 
 async def create_pool():
     global pool
     pool = await aiomysql.create_pool(
-        host="10.10.10.124",
-        port=3306,
-        user="DEV",
-        password="1234",
-        db="delivery",
+        host=os.environ["DB_HOST"],
+        port=int(os.environ.get("DB_PORT", "3306")),
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASS"],
+        db=os.environ["DB_NAME"],
         autocommit=True,
         pool_recycle=3600,  # 1시간마다 커넥션 교체 (MySQL wait_timeout 8시간보다 짧게 설정)
     )
