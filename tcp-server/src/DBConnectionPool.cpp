@@ -24,6 +24,13 @@ void DBConnectionPool::init(const std::string &host, const std::string &user, co
         bool reconnect = true;                                // "재연결 기능을 켜겠다(true)"라는 스위치
         mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect); // 자동 재연결 옵션 설정
 
+        unsigned int connect_timeout = 3; // 연결 타임아웃 3초
+        unsigned int read_timeout = 5;    // 읽기 타임아웃 5초
+        unsigned int write_timeout = 5;   // 쓰기 타임아웃 5초
+
+        mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
+        mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
+
         // 실제 DB에 연결 (delivery DB)
         if (mysql_real_connect(conn, host.c_str(), user.c_str(), pass.c_str(), db.c_str(), port, NULL, 0) == NULL)
         {
@@ -55,8 +62,12 @@ MYSQL *DBConnectionPool::getConnection()
     if (mysql_ping(conn) != 0) // mysql_ping() 함수로 상태 체크
     {                          // 자동 재연결 옵션이 발동해서 어떻게든 다시 연결해 보려고 발악을 했지만, 결국 실패한 경우
         std::cerr << "[DB Pool] 치명적 오류: DB 서버가 응답하지 않습니다.\n";
-        // 문제가 있는 연결은 닫아버리고 NULL 반환 (이 경우 서비스 계층에서 로그인 실패로 처리할 수 있도록)
-        mysql_close(conn);
+        // 🌟 수정된 부분: 연결을 파괴하지 않고 다시 큐에 반납하여 풀의 크기를 10개로 유지!
+        // init()에서 재연결 옵션(MYSQL_OPT_RECONNECT)을 켜두었기 때문에,
+        // 다음번 요청 때 ping을 쏘면 알아서 다시 연결을 시도함.
+        connectionQueue_.push(conn);
+        condVar_.notify_one();
+
         return NULL;
     }
 

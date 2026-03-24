@@ -1,9 +1,10 @@
 #include <iostream>
-#include <cstdlib>  // std::getenv
+#include <cstdlib> // std::getenv
 #include <stdexcept>
 #include "net/ConnectionManager.hpp"
 #include "router/MessageRouter.hpp"
 #include "DBConnectionPool.h"
+#include <csignal>
 
 static constexpr int PORT = 9000;
 
@@ -23,15 +24,19 @@ static void loadEnv(const std::string &path)
     {
         // 줄 끝 개행 제거
         std::string s(line);
-        if (!s.empty() && s.back() == '\n') s.pop_back();
-        if (!s.empty() && s.back() == '\r') s.pop_back();
+        if (!s.empty() && s.back() == '\n')
+            s.pop_back();
+        if (!s.empty() && s.back() == '\r')
+            s.pop_back();
 
         // 빈 줄, 주석 무시
-        if (s.empty() || s[0] == '#') continue;
+        if (s.empty() || s[0] == '#')
+            continue;
 
         // KEY=VALUE 분리
         auto eq = s.find('=');
-        if (eq == std::string::npos) continue;
+        if (eq == std::string::npos)
+            continue;
 
         std::string key = s.substr(0, eq);
         std::string val = s.substr(eq + 1);
@@ -54,18 +59,20 @@ static std::string requireEnv(const char *key)
 
 int main()
 {
+    // + 추가: SIGPIPE 시그널 무시 (클라이언트 강제 종료 시 서버 즉사 방지)
+    signal(SIGPIPE, SIG_IGN);
     try
     {
         // .env 로드 (server 실행 위치 기준)
         loadEnv(".env");
 
         // 환경변수에서 DB 설정 읽기
-        std::string dbHost     = requireEnv("DB_HOST");
-        std::string dbUser     = requireEnv("DB_USER");
-        std::string dbPass     = requireEnv("DB_PASS");
-        std::string dbName     = requireEnv("DB_NAME");
-        int         dbPort     = std::stoi(requireEnv("DB_PORT"));
-        int         dbPoolSize = std::stoi(requireEnv("DB_POOL_SIZE"));
+        std::string dbHost = requireEnv("DB_HOST");
+        std::string dbUser = requireEnv("DB_USER");
+        std::string dbPass = requireEnv("DB_PASS");
+        std::string dbName = requireEnv("DB_NAME");
+        int dbPort = std::stoi(requireEnv("DB_PORT"));
+        int dbPoolSize = std::stoi(requireEnv("DB_POOL_SIZE"));
 
         DBConnectionPool::getInstance().init(dbHost, dbUser, dbPass, dbName, dbPort, dbPoolSize);
         // DB 커넥션 풀 초기화 (호스트, 사용자, 비밀번호, DB 이름, 포트, 풀 크기)

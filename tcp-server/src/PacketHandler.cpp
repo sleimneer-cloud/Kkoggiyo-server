@@ -3,16 +3,16 @@
 #include <arpa/inet.h> // ← 추가
 #include "net/SocketIO.hpp"
 
-std::unordered_map<int, std::unique_ptr<std::mutex>> PacketHandler::fdMutexMap_;
+std::unordered_map<int, std::shared_ptr<std::mutex>> PacketHandler::fdMutexMap_;
 std::mutex PacketHandler::mapMutex_;
 
-std::mutex &PacketHandler::getFdMutex(int fd)
+std::shared_ptr<std::mutex> PacketHandler::getFdMutex(int fd)
 {
     std::lock_guard<std::mutex> lock(mapMutex_);
     auto it = fdMutexMap_.find(fd);
     if (it == fdMutexMap_.end())
-        fdMutexMap_[fd] = std::make_unique<std::mutex>();
-    return *fdMutexMap_[fd];
+        fdMutexMap_[fd] = std::make_shared<std::mutex>();
+    return fdMutexMap_[fd];
 }
 
 void PacketHandler::sendPacket(int target_fd, PacketType type, const json &payload)
@@ -22,7 +22,8 @@ void PacketHandler::sendPacket(int target_fd, PacketType type, const json &paylo
     std::string jsonStr = msg.dump();
     int32_t len = htonl(static_cast<int32_t>(jsonStr.size())); // ← htonl 추가
 
-    std::lock_guard<std::mutex> lock(getFdMutex(target_fd)); // 해당 FD에 대한 mutex 잠금.
+    std::shared_ptr<std::mutex> mtx = getFdMutex(target_fd);
+    std::lock_guard<std::mutex> lock(*mtx); // 각 FD마다 별도의 mutex를 사용하여 송신 과정에서의 동시 접근을 방지합니다.
     // 이유는 송신 과정에서 여러 스레드가 동시에 같은 FD에 접근하여 데이터를 송신할 수 있기 때문입니다.
 
     bool ok = true;

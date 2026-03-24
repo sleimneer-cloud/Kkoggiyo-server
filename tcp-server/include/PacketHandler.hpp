@@ -16,8 +16,7 @@ public:
     static void removeFd(int fd);
 
 private:
-    static std::mutex &getFdMutex(int fd);
-
-    static std::unordered_map<int, std::unique_ptr<std::mutex>> fdMutexMap_;
+    static std::unordered_map<int, std::shared_ptr<std::mutex>> fdMutexMap_;
+    static std::shared_ptr<std::mutex> getFdMutex(int fd);
     static std::mutex mapMutex_;
 };
