@@ -1,22 +1,21 @@
 /**
- * 사장님 클라이언트
+ * 라이더 클라이언트
  * - TCP 서버: 로그인 / 회원가입 / 관리자 채팅
- * - HTTP 이미지 서버: 메뉴 이미지 업로드 / 다운로드
  */
 #include "NetClient.hpp"
-#include "HttpClient.hpp"
-#include "protocol.hpp" // ✅ 공통 프로토콜 헤더 사용
+#include "protocol.hpp" // 공통 프로토콜 헤더
 
 #include <atomic>
 #include <iostream>
 #include <string>
 #include <thread>
 
-static const char *HOST = "10.10.10.113";
+static const char *HOST = "10.10.10.113"; // 서버 IP에 맞게 수정 필요
 static const uint16_t PORT = 9000;
 
 static std::atomic<bool> g_running{true};
 
+// ── 서버 메시지 수신 스레드 ────────────────────────────────
 static void recvThread(NetClient *client)
 {
     while (g_running && client->isConnected())
@@ -25,10 +24,14 @@ static void recvThread(NetClient *client)
         if (type < 0)
             break;
 
-        // ✅ 수정: PacketType enum class 형변환
         if (type == static_cast<int>(PacketType::SC_CHAT_NOTI))
         {
             std::cout << "\n[관리자] " << j.value("message", "") << "\n> " << std::flush;
+        }
+        else if (type == static_cast<int>(PacketType::SC_ORDER_NOTI))
+        {
+            // 나중에 배달 콜(주문 알림)이 올 때를 대비한 처리
+            std::cout << "\n🔔 [새 배달 콜!] " << j.dump() << "\n> " << std::flush;
         }
         else
         {
@@ -40,7 +43,7 @@ static void recvThread(NetClient *client)
 
 int main()
 {
-    std::cout << "=== 사장님 클라이언트 ===\n\n";
+    std::cout << "=== 라이더 클라이언트 ===\n\n";
 
     // ── 1. TCP 서버 연결 ─────────────────────────────────
     NetClient client;
@@ -57,7 +60,7 @@ int main()
 
     while (!isAuthenticated && g_running)
     {
-        std::cout << "=== 접속 메뉴 ===\n";
+        std::cout << "=== 라이더 접속 메뉴 ===\n";
         std::cout << "1. 로그인\n";
         std::cout << "2. 회원가입\n";
         std::cout << "3. 종료\n";
@@ -72,7 +75,7 @@ int main()
             std::cout << "프로그램을 종료합니다.\n";
             return 0;
         }
-        else if (authChoice == "2") // 🚀 회원가입
+        else if (authChoice == "2") // 🚀 라이더 회원가입
         {
             std::string regId, regPw, regName, regPhone;
             std::cout << "\n[회원가입] 아이디: ";
@@ -81,18 +84,17 @@ int main()
             std::getline(std::cin, regPw);
             std::cout << "[회원가입] 이름: ";
             std::getline(std::cin, regName);
-            std::cout << "[회원가입] 전화번호: ";
+            std::cout << "[회원가입] 전화번호(배달 연락용): ";
             std::getline(std::cin, regPhone);
 
-            // ✅ 수정: ClientType::OWNER 적용
+            // 라이더는 ClientType::RIDER 사용
             nlohmann::json regReq = {
-                {"clientType", static_cast<int>(ClientType::OWNER)},
+                {"clientType", static_cast<int>(ClientType::RIDER)},
                 {"userId", regId},
-                {"password", regPw}, // 클라이언트단 해싱이 필요하다면 여기서 적용
+                {"password", regPw},
                 {"userName", regName},
                 {"phone", regPhone}};
 
-            // ✅ 수정: PacketType::CS_REGISTER_REQ 적용
             if (!client.sendPacket(static_cast<int>(PacketType::CS_REGISTER_REQ), regReq))
             {
                 std::cerr << "회원가입 요청 전송 실패\n\n";
@@ -109,7 +111,7 @@ int main()
                 std::cerr << "\n❌ 회원가입 실패: " << resBody.value("message", "알 수 없는 오류") << "\n\n";
             }
         }
-        else if (authChoice == "1") // 🔑 로그인
+        else if (authChoice == "1") // 🔑 라이더 로그인
         {
             std::string inputId, inputPw;
             std::cout << "\n[로그인] 아이디: ";
@@ -118,7 +120,7 @@ int main()
             std::getline(std::cin, inputPw);
 
             nlohmann::json loginReq = {
-                {"clientType", static_cast<int>(ClientType::OWNER)},
+                {"clientType", static_cast<int>(ClientType::RIDER)},
                 {"userId", inputId},
                 {"password", inputPw}};
 
@@ -131,7 +133,7 @@ int main()
             auto [resType, resBody] = client.recvPacket();
             if (resType == static_cast<int>(PacketType::SC_LOGIN_RES) && resBody.value("status", "") == "success")
             {
-                std::cout << "\n✅ 로그인 성공! " << inputId << "님 환영합니다.\n\n";
+                std::cout << "\n🛵 라이더 로그인 성공! " << inputId << "님, 안전 운행하세요!\n\n";
                 loggedInUserId = inputId;
                 isAuthenticated = true;
             }
@@ -157,17 +159,15 @@ int main()
     // ── 4. 메인 메뉴 루프 ─────────────────────────────────
     while (g_running && client.isConnected())
     {
-        std::cout << "\n=== 메뉴 ===\n";
-        std::cout << "1. 관리자 채팅\n";
-        std::cout << "2. 메뉴 이미지 업로드\n";
-        std::cout << "3. 메뉴 이미지 다운로드\n";
-        std::cout << "4. 종료\n";
+        std::cout << "\n=== 라이더 메뉴 ===\n";
+        std::cout << "1. 관리자 채팅 (문의하기)\n";
+        std::cout << "2. 종료\n";
         std::cout << "선택: ";
 
         std::string choice;
         if (!std::getline(std::cin, choice))
             break;
-        if (choice == "4")
+        if (choice == "2")
             break;
 
         // ── 채팅 ──────────────────────────────────────────
@@ -187,11 +187,10 @@ int main()
                     break;
 
                 nlohmann::json chatReq = {
-                    {"clientType", static_cast<int>(ClientType::OWNER)},
+                    {"clientType", static_cast<int>(ClientType::RIDER)},
                     {"senderId", userId},
                     {"message", msg}};
 
-                // ✅ 수정: PacketType::CS_CHAT_REQ
                 if (!client.sendPacket(static_cast<int>(PacketType::CS_CHAT_REQ), chatReq))
                 {
                     std::cerr << "전송 실패\n";
@@ -200,55 +199,12 @@ int main()
                 }
             }
         }
-
-        // ── 이미지 업로드 ─────────────────────────────────
-        else if (choice == "2")
-        {
-            std::string filePath, tmp, ownerIdStr;
-            int menuId, storeId;
-
-            std::cout << "이미지 파일 경로: ";
-            std::getline(std::cin, filePath);
-            std::cout << "메뉴 ID: ";
-            std::getline(std::cin, tmp);
-            menuId = std::stoi(tmp);
-            std::cout << "가게 ID: ";
-            std::getline(std::cin, tmp);
-            storeId = std::stoi(tmp);
-
-            std::cout << "사장님 고유번호(owner_id, 예: 15): ";
-            std::getline(std::cin, ownerIdStr);
-
-            std::string imgPath = HttpClient::uploadImage(ownerIdStr, menuId, storeId, filePath);
-            if (!imgPath.empty())
-                std::cout << "업로드 성공! 경로: " << imgPath << "\n";
-            else
-                std::cout << "업로드 실패\n";
-        }
-        // ── 이미지 다운로드 ───────────────────────────────
-        else if (choice == "3")
-        {
-            std::string tmp, savePath;
-            int menuId;
-
-            std::cout << "메뉴 ID: ";
-            std::getline(std::cin, tmp);
-            menuId = std::stoi(tmp);
-            std::cout << "저장 경로 (예: /home/lms/result.jpg): ";
-            std::getline(std::cin, savePath);
-
-            std::string saved = HttpClient::downloadImage(menuId, savePath);
-            if (!saved.empty())
-                std::cout << "다운로드 성공! 파일: " << saved << "\n";
-            else
-                std::cout << "다운로드 실패\n";
-        }
     }
 
     g_running = false;
     client.close();
     if (recvWorker.joinable())
         recvWorker.join();
-    std::cout << "종료합니다.\n";
+    std::cout << "프로그램을 종료합니다. 수고하셨습니다!\n";
     return 0;
 }

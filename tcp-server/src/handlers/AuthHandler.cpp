@@ -17,7 +17,7 @@
 void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
 {
     std::string id = j.value("userId", "");
-    int cType      = j.value("clientType", -1);
+    int cType = j.value("clientType", -1);
 
     bool loginSuccess = false;
 
@@ -82,6 +82,12 @@ void AuthHandler::handleRegister(int client_fd, const nlohmann::json &j) const
     {
         CustomerAuthService customerSvc;
         registerSuccess = customerSvc.processRegister(j);
+        break;
+    }
+    case ClientType::OWNER: // ✅ 사장님(OWNER) 회원가입 라우팅 추가!
+    {
+        BossAuthService bossSvc;
+        registerSuccess = bossSvc.processRegister(j);
         break;
     }
     case ClientType::RIDER: // ✅ 라이더 회원가입 추가

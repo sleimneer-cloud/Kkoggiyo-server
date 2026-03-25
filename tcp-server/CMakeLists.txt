@@ -79,3 +79,14 @@ add_executable(boss_client
 
 target_include_directories(boss_client PRIVATE clients include)
 target_link_libraries(boss_client PRIVATE Threads::Threads ${CURL_LIBRARIES})
+
+# ==========================================
+# [라이더 클라이언트 (Rider Client) 타겟 설정]
+# ==========================================
+add_executable(rider_client
+    clients/rider_client.cpp
+    clients/NetClient.cpp
+)
+
+target_include_directories(rider_client PRIVATE clients include)
+target_link_libraries(rider_client PRIVATE Threads::Threads)
