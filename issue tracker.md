@@ -21,7 +21,7 @@
 - [ ] **2-1. SQL Injection 취약점 제거** (`src/services/OrderService.cpp` 등)
   - **문제:** 사용자 입력값(요청사항 등)을 단순 문자열 덧셈으로 SQL 쿼리에 직접 삽입 중.
   - **해결 목표:** `DBHelper`의 Prepare Statement(파라미터 바인딩) 방식으로 쿼리 전면 교체.
-- [ ] **2-2. OOM(Out of Memory) 공격 무방비** (`src/net/ConnectionManager.cpp`)
+- [x] **2-2. OOM(Out of Memory) 공격 무방비** (`src/net/ConnectionManager.cpp`)
   - **문제:** 소켓 버퍼(`buf`)에 수신 데이터를 검증 없이 무한정 쌓아두어, 악의적 대용량 패킷에 메모리가 터질 위험 존재.
   - **해결 목표:** 버퍼 및 패킷의 최대 허용 크기(Max Size)를 강제하고 초과 시 연결 즉시 차단.
 - [ ] **2-3. `SessionManager` 세션 충돌 버그** (`src/SessionManager.cpp`)

@@ -24,12 +24,14 @@ add_executable(server
     src/router/MessageRouter.cpp
     src/handlers/AuthHandler.cpp
     src/handlers/ChatHandler.cpp
+    src/handlers/AdminHandler.cpp
     src/PacketHandler.cpp
     src/SessionManager.cpp
     src/repo/InMemoryUserRepository.cpp
     src/services/CustomerAuthService.cpp
     src/services/BossAuthService.cpp
     src/services/OrderService.cpp
+    src/services/AdminAuthService.cpp
     src/services/NotifyService.cpp
     src/services/RiderAuthService.cpp
     src/usecase/PlaceOrderUseCase.cpp

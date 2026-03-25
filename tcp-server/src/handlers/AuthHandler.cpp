@@ -10,6 +10,7 @@
 #include "services/CustomerAuthService.hpp"
 #include "services/BossAuthService.hpp"
 #include "services/RiderAuthService.hpp" // ✅ 주석 해제
+#include "services/AdminAuthService.hpp"
 
 // ---------------------------------------------------------
 // 로그인
@@ -43,9 +44,8 @@ void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
     }
     case ClientType::ADMIN:
     {
-        // TODO: 관리자 DB 검증 추가 필요 (현재 무조건 성공)
-        std::cout << "[AuthHandler] 관리자(" << id << ") 로그인 요청 접수\n";
-        loginSuccess = true;
+        AdminAuthService adminSvc;
+        loginSuccess = adminSvc.processLogin(client_fd, j);
         break;
     }
     default:

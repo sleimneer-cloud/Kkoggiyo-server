@@ -30,6 +30,7 @@ void ChatHandler::handleChat(int client_fd, const nlohmann::json &j) const
         nlohmann::json notiPayload = {
             {"senderId", senderId},
             {"message", msg},
+            {"clientType", senderType},
             {"info", "현장 문의 (고객/가게/라이더)"}};
 
         for (int adminFd : admins)

@@ -3,6 +3,8 @@
 #include <string>
 #include "handlers/AuthHandler.hpp"
 #include "handlers/ChatHandler.hpp"
+#include "handlers/OrderHandler.hpp"
+#include "handlers/AdminHandler.hpp"
 
 class MessageRouter
 {
@@ -12,4 +14,6 @@ public:
 private:
     AuthHandler authHandler_;
     ChatHandler chatHandler_;
+    OrderHandler orderHandler_;
+    AdminHandler adminHandler_;
 };

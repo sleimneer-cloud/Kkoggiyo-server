@@ -10,15 +10,16 @@
 #include <iostream>
 #include <string>
 #include <thread>
+// json::exception 처리를 위해 포함 (NetClient.hpp에 이미 있다면 생략 가능)
+#include <nlohmann/json.hpp>
 
 static const char *HOST = "127.0.0.1";
 static const uint16_t PORT = 9000;
 
-// 패킷 타입 정의 (서버의 protocol.hpp와 일치해야 합니다)
 static const int CS_LOGIN_REQ = 100;
 static const int SC_LOGIN_RES = 101;
-static const int CS_REGISTER_REQ = 102; // 회원가입 요청 패킷 번호 (임의 지정)
-static const int SC_REGISTER_RES = 103; // 회원가입 응답 패킷 번호 (임의 지정)
+static const int CS_REGISTER_REQ = 102;
+static const int SC_REGISTER_RES = 103;
 static const int CS_CHAT_REQ = 200;
 static const int SC_CHAT_NOTI = 201;
 
@@ -84,7 +85,6 @@ int main()
 
         if (choice == "1")
         {
-            // 회원가입 진행
             std::string id, pw, name, phone;
             std::cout << "[회원가입]\n";
             std::cout << "아이디: ";
@@ -96,30 +96,38 @@ int main()
             std::cout << "전화번호: ";
             std::getline(std::cin, phone);
 
-            nlohmann::json regReq = {
-                {"clientType", 1},
-                {"userId", id},
-                {"password", pw}, // DB 컬럼명 및 서버 파싱 키와 일치
-                {"userName", name},
-                {"phone", phone}};
-
-            if (!client.sendPacket(CS_REGISTER_REQ, regReq))
+            try
             {
-                std::cerr << "회원가입 요청 전송 실패\n";
-                break;
-            }
+                nlohmann::json regReq = {
+                    {"clientType", 1},
+                    {"userId", id},
+                    {"password", pw},
+                    {"userName", name},
+                    {"phone", phone}};
 
-            auto [resType, resBody] = client.recvPacket();
-            if (resType < 0 || resBody.is_null())
-            {
-                std::cerr << "응답 수신 실패\n";
-                break;
+                if (!client.sendPacket(CS_REGISTER_REQ, regReq))
+                {
+                    std::cerr << "회원가입 요청 전송 실패\n";
+                    break;
+                }
+
+                auto [resType, resBody] = client.recvPacket();
+                if (resType < 0 || resBody.is_null())
+                {
+                    std::cerr << "응답 수신 실패\n";
+                    break;
+                }
+                std::cout << "[서버 응답] " << resBody.value("message", "") << "\n\n";
             }
-            std::cout << "[서버 응답] " << resBody.value("message", "") << "\n\n";
+            catch (const nlohmann::json::exception &e)
+            {
+                // 한글 등 멀티바이트 문자 입력 중 깨진 바이트가 포함된 경우 예외 처리
+                std::cerr << "\n[오류] 입력값에 처리할 수 없는 문자(깨진 한글 등)가 포함되어 있습니다. 다시 시도해주세요.\n\n";
+                std::cin.clear(); // 스트림 에러 플래그 초기화
+            }
         }
         else if (choice == "2")
         {
-            // 로그인 진행
             std::string id, pw;
             std::cout << "[로그인]\n";
             std::cout << "아이디: ";
@@ -127,34 +135,41 @@ int main()
             std::cout << "비밀번호: ";
             std::getline(std::cin, pw);
 
-            nlohmann::json loginReq = {
-                {"clientType", 1},
-                {"userId", id},
-                {"password", pw} // userPw 였던 부분을 password로 변경
-            };
-
-            if (!client.sendPacket(CS_LOGIN_REQ, loginReq))
+            try
             {
-                std::cerr << "로그인 요청 전송 실패\n";
-                break;
+                nlohmann::json loginReq = {
+                    {"clientType", 1},
+                    {"userId", id},
+                    {"password", pw}};
+
+                if (!client.sendPacket(CS_LOGIN_REQ, loginReq))
+                {
+                    std::cerr << "로그인 요청 전송 실패\n";
+                    break;
+                }
+
+                auto [resType, resBody] = client.recvPacket();
+
+                if (resType < 0 || resBody.is_null())
+                {
+                    std::cerr << "응답 수신 실패\n";
+                    break;
+                }
+
+                if (resType == SC_LOGIN_RES && resBody.value("status", "") == "success")
+                {
+                    std::cout << "[서버 응답] " << resBody.value("message", "") << "\n\n";
+                    loggedInUserId = id;
+                }
+                else
+                {
+                    std::cout << "[서버 응답] 로그인 실패: " << resBody.value("message", "") << "\n\n";
+                }
             }
-
-            auto [resType, resBody] = client.recvPacket();
-
-            if (resType < 0 || resBody.is_null())
+            catch (const nlohmann::json::exception &e)
             {
-                std::cerr << "응답 수신 실패\n";
-                break;
-            }
-
-            if (resType == SC_LOGIN_RES && resBody.value("status", "") == "success")
-            {
-                std::cout << "[서버 응답] " << resBody.value("message", "") << "\n\n";
-                loggedInUserId = id; // 로그인 성공 시 아이디 저장 및 루프 탈출
-            }
-            else
-            {
-                std::cout << "[서버 응답] 로그인 실패: " << resBody.value("message", "") << "\n\n";
+                std::cerr << "\n[오류] 입력값에 처리할 수 없는 문자가 포함되어 있습니다. 다시 시도해주세요.\n\n";
+                std::cin.clear();
             }
         }
         else
@@ -169,9 +184,6 @@ int main()
         return 0;
     }
 
-    // ---------------------------------------------------------
-    // 2. 로그인 성공 후 채팅 수신 스레드 가동
-    // ---------------------------------------------------------
     std::thread recvWorker(recvThread, &client);
 
     // ---------------------------------------------------------
@@ -216,16 +228,26 @@ int main()
                 break;
             }
 
-            nlohmann::json chatReq = {
-                {"clientType", 1},
-                {"senderId", loggedInUserId},
-                {"message", msg}};
-
-            if (!client.sendPacket(CS_CHAT_REQ, chatReq))
+            try
             {
-                std::cerr << "전송 실패\n";
-                g_running = false;
-                break;
+                nlohmann::json chatReq = {
+                    {"clientType", 1},
+                    {"senderId", loggedInUserId},
+                    {"message", msg}};
+
+                if (!client.sendPacket(CS_CHAT_REQ, chatReq))
+                {
+                    std::cerr << "전송 실패\n";
+                    g_running = false;
+                    break;
+                }
+            }
+            catch (const nlohmann::json::exception &e)
+            {
+                // 채팅 중 한글이 깨져도 프로그램이 꺼지지 않고 경고만 출력 후 다시 입력받음
+                std::cerr << "\n[시스템] 깨진 문자가 감지되었습니다. 메시지를 다시 입력해 주세요.\n";
+                std::cin.clear();
+                continue; // 루프를 종료하지 않고 다음 입력 대기
             }
         }
     }
