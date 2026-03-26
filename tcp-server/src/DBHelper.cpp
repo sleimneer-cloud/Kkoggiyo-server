@@ -96,7 +96,7 @@ bool DBHelper::executeSelectOneString(MYSQL *conn, const std::string &query, con
     MYSQL_BIND result_bind[1];
     memset(result_bind, 0, sizeof(result_bind));
 
-    char result_buffer[256]; // 비밀번호가 들어갈 넉넉한 버퍼
+    char result_buffer[512]; // 비밀번호가 들어갈 넉넉한 버퍼
     unsigned long result_length;
     my_bool is_null;
     my_bool error;
@@ -110,12 +110,14 @@ bool DBHelper::executeSelectOneString(MYSQL *conn, const std::string &query, con
 
     if (mysql_stmt_bind_result(stmt, result_bind) != 0)
     {
+        std::cerr << "[DBHelper] Bind Result Error: " << mysql_stmt_error(stmt) << "\n";
         mysql_stmt_close(stmt);
         return false;
     }
 
     if (mysql_stmt_store_result(stmt) != 0)
     {
+        std::cerr << "[DBHelper] Store Result Error: " << mysql_stmt_error(stmt) << "\n";
         mysql_stmt_close(stmt);
         return false;
     }
@@ -134,4 +136,90 @@ bool DBHelper::executeSelectOneString(MYSQL *conn, const std::string &query, con
     mysql_stmt_free_result(stmt);
     mysql_stmt_close(stmt);
     return found;
+}
+
+bool DBHelper::executeSelectMultipleRows(
+    MYSQL *conn,
+    const std::string &query,
+    const std::vector<std::string> &params,
+    const std::vector<int> &columnSizes,
+    std::vector<std::vector<std::string>> &results)
+{
+    MYSQL_STMT *stmt = mysql_stmt_init(conn);
+    if (!stmt) return false;
+
+    if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
+        std::cerr << "[DBHelper] Prepare Error: " << mysql_stmt_error(stmt) << "\n";
+        mysql_stmt_close(stmt);
+        return false;
+    }
+
+    // 파라미터 바인딩
+    std::vector<MYSQL_BIND> binds(params.size());
+    std::vector<unsigned long> lengths(params.size());
+    memset(binds.data(), 0, sizeof(MYSQL_BIND) * params.size());
+
+    for (size_t i = 0; i < params.size(); ++i) {
+        binds[i].buffer_type   = MYSQL_TYPE_STRING;
+        binds[i].buffer        = (void*)params[i].c_str();
+        lengths[i]             = params[i].length();
+        binds[i].buffer_length = lengths[i];
+        binds[i].length        = &lengths[i];
+    }
+
+    if (!params.empty() && mysql_stmt_bind_param(stmt, binds.data()) != 0) {
+        std::cerr << "[DBHelper] Bind Error: " << mysql_stmt_error(stmt) << "\n";
+        mysql_stmt_close(stmt);
+        return false;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[DBHelper] Execute Error: " << mysql_stmt_error(stmt) << "\n";
+        mysql_stmt_close(stmt);
+        return false;
+    }
+
+    // 결과 바인딩
+    int colCount = static_cast<int>(columnSizes.size());
+    std::vector<MYSQL_BIND>              resBind(colCount);
+    std::vector<std::vector<char>>       buffers(colCount);
+    std::vector<unsigned long>           resLengths(colCount);
+    std::vector<int8_t>                  isNulls(colCount, 0);
+
+    memset(resBind.data(), 0, sizeof(MYSQL_BIND) * colCount);
+
+    for (int i = 0; i < colCount; ++i) {
+        buffers[i].resize(columnSizes[i]);
+        resBind[i].buffer_type   = MYSQL_TYPE_STRING;
+        resBind[i].buffer        = buffers[i].data();
+        resBind[i].buffer_length = columnSizes[i];
+        resBind[i].length        = &resLengths[i];
+        resBind[i].is_null       = (my_bool*)&isNulls[i];
+    }
+
+    if (mysql_stmt_bind_result(stmt, resBind.data()) != 0) {
+        std::cerr << "[DBHelper] Bind Result Error: " << mysql_stmt_error(stmt) << "\n";
+        mysql_stmt_close(stmt);
+        return false;
+    }
+
+    if (mysql_stmt_store_result(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return false;
+    }
+
+    // 전체 행 읽기
+    while (mysql_stmt_fetch(stmt) == 0) {
+        std::vector<std::string> row(colCount);
+        for (int i = 0; i < colCount; ++i) {
+            if (!isNulls[i]) {
+                row[i] = std::string(buffers[i].data(), resLengths[i]);
+            }
+        }
+        results.push_back(row);
+    }
+
+    mysql_stmt_free_result(stmt);
+    mysql_stmt_close(stmt);
+    return true;
 }

@@ -27,6 +27,33 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
 
         switch (static_cast<PacketType>(msgType))
         {
+        case PacketType::USER_REGISTER_REQ:
+            authHandler_.handleRegister(client_fd, j);
+            break;
+        case PacketType::USER_VERIFY_REQ:
+            authHandler_.handleVerify(client_fd, j);
+            break;
+        case PacketType::USER_LOGIN_REQ:
+            authHandler_.handleLogin(client_fd, j);
+            break;
+        case PacketType::USER_NAME_ALT_REQ:
+            authHandler_.handleNameChange(client_fd, j);
+            break;
+        case PacketType::USER_WITHDRAW_PW_REQ:
+            authHandler_.handleWithdrawVerify(client_fd, j);
+            break;
+        case PacketType::USER_WITHDRAW_REQ:
+            authHandler_.handleWithdraw(client_fd, j);
+            break;
+        case PacketType::USER_ID_CHECK_REQ:
+            authHandler_.handleIdCheck(client_fd, j);
+            break;
+        case PacketType::USER_ADDR_ADD_REQ:
+            authHandler_.handleAddAddress(client_fd, j);
+            break;
+        case PacketType::USER_ADDR_LIST_REQ:
+            authHandler_.handleGetAddresses(client_fd, j);
+            break;
         case PacketType::CS_LOGIN_REQ:
             authHandler_.handleLogin(client_fd, j);
             break;

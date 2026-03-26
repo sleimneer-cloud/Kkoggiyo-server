@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 4. 패키지 찾기 (멀티스레딩 및 cURL)
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # ==========================================
 # [서버 (Server) 타겟 설정]
@@ -45,7 +46,7 @@ add_executable(server
 )
 
 target_include_directories(server PRIVATE include)
-target_link_libraries(server PRIVATE Threads::Threads mariadb crypt ssl crypto)
+target_link_libraries(server PRIVATE Threads::Threads mariadb crypt OpenSSL::SSL OpenSSL::Crypto)
 
 
 

@@ -21,6 +21,7 @@ ConnectionManager::ConnectionManager(int port, MessageRouter router)            
 
     int opt = 1;
     setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)); // 소켓 옵션 설정 (주소 재사용)
+    setsockopt(server_fd_, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)); // 소켓 옵션 설정 (포트 재사용)
 
     sockaddr_in server_addr;
     std::memset(&server_addr, 0, sizeof(server_addr)); // 서버 주소 구조체 초기화
