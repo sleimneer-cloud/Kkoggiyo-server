@@ -15,9 +15,8 @@ static bool bcryptVerify(const std::string &password, const std::string &hash)
     const char *result = crypt(password.c_str(), hash.c_str());
     return result && (hash == std::string(result));
 }
-// 암호화 함수
 
-static std::string generateBcryptSalt() // bcrypt 솔트 생성 (22자 + 버전/비용 정보 포함)
+static std::string generateBcryptSalt()
 {
     static const char b64chars[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./";
@@ -32,12 +31,13 @@ static std::string generateBcryptSalt() // bcrypt 솔트 생성 (22자 + 버전/
     return salt;
 }
 
-static std::string bcryptHash(const std::string &password) // bcrypt 해시 생성
+static std::string bcryptHash(const std::string &password)
 {
     std::string salt = generateBcryptSalt();
     const char *hashed = crypt(password.c_str(), salt.c_str());
     return hashed ? std::string(hashed) : "";
 }
+
 // ---------------------------------------------------------
 // 로그인 로직
 // ---------------------------------------------------------
@@ -46,8 +46,8 @@ bool BossAuthService::processLogin(int fd, const nlohmann::json &payload)
     if (!payload.contains("userId") || !payload.contains("password"))
         return false;
 
-    std::string userId = payload["userId"];
-    std::string inputPw = payload["password"]; // 클라이언트 SHA256 해싱값
+    std::string userId  = payload["userId"];
+    std::string inputPw = payload["password"];
 
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
     if (!conn)
@@ -55,13 +55,12 @@ bool BossAuthService::processLogin(int fd, const nlohmann::json &payload)
 
     std::string query = "SELECT password FROM member WHERE login_id = ? AND role = 2";
     std::vector<std::string> params = {userId};
-    std::string dbPassword; // DB에 저장된 bcrypt 해시
+    std::string dbPassword;
 
     bool success = false;
 
     if (DBHelper::executeSelectOneString(conn, query, params, dbPassword))
     {
-        // ✅ 수정: == 단순 비교 → bcryptVerify로 검증
         if (bcryptVerify(inputPw, dbPassword))
         {
             std::cout << "[BossAuthService] 사장님 로그인 성공: " << userId << "\n";
@@ -83,20 +82,26 @@ bool BossAuthService::processLogin(int fd, const nlohmann::json &payload)
 
 // ---------------------------------------------------------
 // 회원가입 로직
-// --------------------------------------------------------
-
+// ---------------------------------------------------------
 bool BossAuthService::processRegister(const nlohmann::json &payload)
 {
-    if (!payload.contains("userId") || !payload.contains("password") ||
-        !payload.contains("userName") || !payload.contains("phone"))
+    // ▼ 수정: storeName, storeAddress, licnese 필드 검증 추가
+    if (!payload.contains("userId")       || !payload.contains("password") ||
+        !payload.contains("userName")     || !payload.contains("phone")    ||
+        !payload.contains("storeName")    || !payload.contains("storeAddress") ||
+        !payload.contains("licnese"))
     {
         return false;
     }
 
-    std::string userId = payload["userId"];
-    std::string password = payload["password"]; // 클라이언트가 보낸 SHA256 해시값
-    std::string userName = payload["userName"];
-    std::string phone = payload["phone"];
+    std::string userId       = payload["userId"];
+    std::string password     = payload["password"]; // 클라이언트가 보낸 SHA256 해시값
+    std::string userName     = payload["userName"];
+    std::string phone        = payload["phone"];
+    // ▼ 수정: 가게 정보 추출 추가
+    std::string storeName    = payload["storeName"];
+    std::string storeAddress = payload["storeAddress"];
+    std::string license      = payload["licnese"]; // 클라이언트 키 오타와 일치시킴
 
     // 서버에서 bcrypt로 한 번 더 강력하게 해싱
     std::string hashedPassword = bcryptHash(password);
@@ -110,18 +115,31 @@ bool BossAuthService::processRegister(const nlohmann::json &payload)
     if (!conn)
         return false;
 
-    // 사장님은 role = 2 로 저장
-    std::string query = "INSERT INTO member (login_id, password, name, role, phone) VALUES (?, ?, ?, 2, ?)";
-    std::vector<std::string> params = {userId, hashedPassword, userName, phone};
+    // ── 1단계: member 테이블에 사장님 계정 저장 (role = 2) ──────────────────
+    std::string memberQuery = "INSERT INTO member (login_id, password, name, role, phone) VALUES (?, ?, ?, 2, ?)";
+    std::vector<std::string> memberParams = {userId, hashedPassword, userName, phone};
 
-    if (!DBHelper::executeUpdate(conn, query, params))
+    if (!DBHelper::executeUpdate(conn, memberQuery, memberParams))
     {
-        std::cerr << "[BossAuthService] 사장님 회원가입 실패: " << userId << "\n";
+        std::cerr << "[BossAuthService] 사장님 회원가입 실패 (member): " << userId << "\n";
         DBConnectionPool::getInstance().releaseConnection(conn);
         return false;
     }
 
-    std::cout << "[BossAuthService] 사장님 회원가입 완료: " << userId << "\n";
+    // ── 2단계: store 테이블에 가게 정보 저장 ────────────────────────────────
+    // LAST_INSERT_ID()로 방금 INSERT된 member의 PK를 FK로 사용합니다.
+    // store 테이블의 컬럼명(name, address, license)은 실제 스키마에 맞게 조정하세요.
+    std::string storeQuery = "INSERT INTO store (owner_id, store_name, store_address, business_reg_num) VALUES (LAST_INSERT_ID(), ?, ?, ?)";
+    std::vector<std::string> storeParams = {storeName, storeAddress, license};
+
+    if (!DBHelper::executeUpdate(conn, storeQuery, storeParams))
+    {
+        std::cerr << "[BossAuthService] 가게 정보 저장 실패 (store): " << userId << "\n";
+        DBConnectionPool::getInstance().releaseConnection(conn);
+        return false;
+    }
+
+    std::cout << "[BossAuthService] 사장님 회원가입 완료 (member + store): " << userId << "\n";
     DBConnectionPool::getInstance().releaseConnection(conn);
     return true;
 }
