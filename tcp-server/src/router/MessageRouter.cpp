@@ -7,6 +7,7 @@
 #include "handlers/AuthHandler.hpp"
 #include "handlers/ChatHandler.hpp"
 #include "handlers/OrderHandler.hpp"
+#include "handlers/AdminHandler.hpp"
 
 using json = nlohmann::json;
 
@@ -35,6 +36,13 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
         case PacketType::CS_CHAT_REQ:
             chatHandler_.handleChat(client_fd, j);
             break;
+        case PacketType::CS_ADMIN_SEARCH_ID:
+            adminHandler_.handleSearchId(client_fd, j);
+            break;
+        case PacketType::CS_ADMIN_SEARCH_HISTORY:
+            adminHandler_.handleSearchHistory(client_fd, j);
+            break;
+
         // ── 주문 관련 ─────────────────────────────────── ← 추가
         case PacketType::CS_ORDER_REQ:    // 300
         case PacketType::CS_ORDER_CANCEL: // 304

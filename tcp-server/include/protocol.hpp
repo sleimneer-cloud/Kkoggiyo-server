@@ -18,6 +18,12 @@ enum class PacketType : int32_t // 4바이트 정수형으로 저장
     CS_CHAT_REQ = 200,  // 클라 -> 서버: 채팅 전송
     SC_CHAT_NOTI = 201, // 서버 -> 클라: 채팅 수신
 
+    // [관리자  기능]
+    CS_ADMIN_SEARCH_ID = 1003,          // 관리자 -> 서버: 아이디 검색
+    SC_ADMIN_SEARCH_ID_RES = 1004,      // 서버 -> 관리자: 아이디 검색 결과
+    CS_ADMIN_SEARCH_HISTORY = 1016,     // 관리자 -> 서버: 유저 주문 이력 검색
+    SC_ADMIN_SEARCH_HISTORY_RES = 1017, // 서버 -> 관리자: 유저 주문 이력 검색 결과
+
     // [주문 관련]
     CS_ORDER_REQ = 300,    // 고객 -> 서버: 주문 요청
     SC_ORDER_NOTI = 301,   // 서버 -> 가게/관리자: 새 주문 알림

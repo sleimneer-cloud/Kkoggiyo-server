@@ -15,5 +15,5 @@ private:
     AuthHandler authHandler_;
     ChatHandler chatHandler_;
     OrderHandler orderHandler_;
-    AdminHandler adminHandler_;
+    mutable AdminHandler adminHandler_;
 };
