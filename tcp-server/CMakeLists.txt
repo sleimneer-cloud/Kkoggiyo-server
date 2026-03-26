@@ -36,6 +36,7 @@ add_executable(server
     src/services/RiderAuthService.cpp
     src/services/AdminService.cpp       # ← 추가!
     src/usecase/SearchUserUseCase.cpp   # ← 추가!
+    src/usecase/SearchHistoryUseCase.cpp
     src/usecase/PlaceOrderUseCase.cpp
     src/usecase/CancelOrderUseCase.cpp
     src/usecase/AcceptOrderUseCase.cpp

@@ -3,7 +3,7 @@
 #include "json.hpp"
 #include "services/AdminService.hpp"
 #include "usecase/SearchUserUseCase.hpp"
-// #include "usecase/SearchHistoryUseCase.hpp" // 나중에 추가될 유스케이스
+#include "usecase/SearchHistoryUseCase.hpp"
 
 using json = nlohmann::json;
 
@@ -23,5 +23,5 @@ private:
 
     // 2. 서비스 인스턴스를 주입받아 동작할 유스케이스들
     SearchUserUseCase searchUserUC_;
-    // SearchHistoryUseCase searchHistoryUC_; // 나중에 기능 추가 시 활성화
+    SearchHistoryUseCase searchHistoryUC_;
 };
