@@ -19,6 +19,7 @@ public:
     void handleSearchHistory(int clientFd, const json &j); // MessageRouter에 이미 정의된 처리용
     void handleRefund(int clientFd, const json &j);
     void handleBanUser(int clientFd, const json &j);
+    void handleClearBanUser(int clientFd, const json &j);
 
 private:
     // 1. 사용할 서비스 인스턴스들

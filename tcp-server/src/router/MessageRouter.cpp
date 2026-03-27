@@ -76,7 +76,9 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
         case PacketType::CS_ADMIN_BAN_USER:
             adminHandler_.handleBanUser(client_fd, j);
             break;
-
+        case PacketType::CS_ADMIN_CLEAR_BAN_USER:
+            adminHandler_.handleClearBanUser(client_fd, j);
+            break;
         case PacketType::CS_STORE_OPEN_REQ: // 4910
             StoreHandler{}.handleStoreOpenReq(client_fd, j);
             break;

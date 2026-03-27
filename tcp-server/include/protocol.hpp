@@ -27,7 +27,8 @@ enum class PacketType : int32_t // 4바이트 정수형으로 저장
     SC_ADMIN_REFUND_RES = 1301,         // 서버 -> 관리자: 환불 처리 결과
     CS_ADMIN_BAN_USER = 1400,           // 관리자 -> 서버: 유저 차단 요청
     SC_ADMIN_BAN_USER_RES = 1401,       // 서버 -> 관리자: 유저 차단 결과
-
+    CS_ADMIN_CLEAR_BAN_USER = 1500,     // 관리자 -> 서버: 유저 차단 해제 요청
+    SC_ADMIN_CLEAR_BAN_USER_RES = 1501, // 서버 -> 관리자: 유저 차단 해제 결과
     // [주문 관련]
     CS_ORDER_REQ = 300,    // 고객 -> 서버: 주문 요청
     SC_ORDER_NOTI = 301,   // 서버 -> 가게/관리자: 새 주문 알림
