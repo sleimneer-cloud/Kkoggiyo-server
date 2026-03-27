@@ -45,6 +45,8 @@ add_executable(server
     src/handlers/OrderHandler.cpp
     src/handlers/StoreHandler.cpp
     src/services/StoreService.cpp
+    src/handlers/ClientHandler.cpp
+    src/services/ClientService.cpp
 )
 
 target_include_directories(server PRIVATE include)

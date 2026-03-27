@@ -5,6 +5,8 @@
 #include "handlers/ChatHandler.hpp"
 #include "handlers/OrderHandler.hpp"
 #include "handlers/AdminHandler.hpp"
+#include "handlers/ClientHandler.hpp"
+#include "handlers/StoreHandler.hpp"
 
 class MessageRouter
 {
@@ -16,4 +18,6 @@ private:
     ChatHandler chatHandler_;
     OrderHandler orderHandler_;
     mutable AdminHandler adminHandler_;
+    ClientHandler clientHandler_;
+    mutable StoreHandler storeHandler_;
 };

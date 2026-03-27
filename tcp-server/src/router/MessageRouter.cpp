@@ -80,10 +80,16 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
             adminHandler_.handleClearBanUser(client_fd, j);
             break;
         case PacketType::CS_STORE_OPEN_REQ: // 4910
-            StoreHandler{}.handleStoreOpenReq(client_fd, j);
+            storeHandler_.handleStoreOpenReq(client_fd, j);
+            break;
+        case PacketType::USER_STORE_LIST_REQ:
+            clientHandler_.handleGetStores(client_fd, j);
+            break;
+        case PacketType::USER_MENU_LIST_REQ:
+            clientHandler_.handleGetMenus(client_fd, j);
             break;
 
-        // ── 주문 관련 ─────────────────────────────────── ← 추가
+                // ── 주문 관련 ─────────────────────────────────── ← 추가
         case PacketType::CS_ORDER_REQ:    // 300
         case PacketType::CS_ORDER_CANCEL: // 304
         case PacketType::CS_ORDER_ACCEPT: // 305
