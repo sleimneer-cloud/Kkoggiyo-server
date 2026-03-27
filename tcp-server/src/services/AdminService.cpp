@@ -104,10 +104,23 @@ json AdminService::getUserByLoginId(const std::string &loginId)
 json AdminService::getOrderHistoryByTargetId(int targetId)
 {
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
-    if (!conn) return json::array();
+    if (!conn)
+        return json::array();
 
-    std::string q = "SELECT order_id, store_id, rider_id, status, estimated_time, request_msg, order_date "
-                    "FROM orders WHERE customer_id = " + std::to_string(targetId) + " ORDER BY order_date DESC";
+    // [수정 포인트] login_id 버전과 동일하게 JOIN을 사용하여 플랫(Flat)한 구조로 데이터 한 번에 조회
+    std::string q =
+        "SELECT "
+        "o.order_id, o.store_id, o.rider_id, o.status, o.estimated_time, "
+        "o.order_date, o.request_msg, s.store_name, mn.menu_name, "
+        "oi.quantity, (oi.price * oi.quantity) AS total_price "
+        "FROM orders o "
+        "JOIN member mb ON o.customer_id = mb.member_id "
+        "JOIN store s ON o.store_id = s.store_id "
+        "JOIN order_item oi ON o.order_id = oi.order_id "
+        "JOIN menu mn ON oi.menu_id = mn.menu_id "
+        "WHERE mb.member_id = " +
+        std::to_string(targetId) + " " // <-- 숫자 ID로 검색!
+                                   "ORDER BY o.order_date DESC";
 
     if (mysql_query(conn, q.c_str()))
     {
@@ -122,59 +135,51 @@ json AdminService::getOrderHistoryByTargetId(int targetId)
 
     while ((row = mysql_fetch_row(res)))
     {
-        int orderId = row[0] ? std::stoi(row[0]) : 0;
-        json orderObj = {
-            {"order_id", orderId},
+        json itemObj = {
+            {"order_id", row[0] ? std::stoi(row[0]) : 0},
             {"store_id", row[1] ? std::stoi(row[1]) : 0},
             {"rider_id", row[2] ? std::stoi(row[2]) : 0},
             {"status", row[3] ? row[3] : ""},
             {"estimated_time", row[4] ? std::stoi(row[4]) : 0},
-            {"request_msg", row[5] ? row[5] : ""},
-            {"order_date", row[6] ? row[6] : ""},
-            {"items", json::array()}
-        };
-        ordersArr.push_back(orderObj);
+            {"order_date", row[5] ? row[5] : ""},
+            {"request_msg", row[6] ? row[6] : ""},
+            {"store_name", row[7] ? row[7] : ""},
+            {"menu_name", row[8] ? row[8] : ""},
+            {"quantity", row[9] ? std::stoi(row[9]) : 0},
+            {"total_price", row[10] ? std::stoi(row[10]) : 0}};
+
+        ordersArr.push_back(itemObj);
     }
+
     mysql_free_result(res);
-
-    for (auto& orderObj : ordersArr)
-    {
-        int orderId = orderObj["order_id"];
-        std::string iq = "SELECT order_item_id, menu_id, quantity, price FROM order_item WHERE order_id = " + std::to_string(orderId);
-        if (mysql_query(conn, iq.c_str()) == 0)
-        {
-            MYSQL_RES *ires = mysql_store_result(conn);
-            MYSQL_ROW irow;
-            json itemsArr = json::array();
-            while ((irow = mysql_fetch_row(ires)))
-            {
-                itemsArr.push_back({
-                    {"order_item_id", irow[0] ? std::stoi(irow[0]) : 0},
-                    {"menu_id", irow[1] ? std::stoi(irow[1]) : 0},
-                    {"quantity", irow[2] ? std::stoi(irow[2]) : 0},
-                    {"price", irow[3] ? std::stoi(irow[3]) : 0}
-                });
-            }
-            orderObj["items"] = itemsArr;
-            mysql_free_result(ires);
-        }
-    }
-
     DBConnectionPool::getInstance().releaseConnection(conn);
+
     return ordersArr;
 }
 
 json AdminService::getOrderHistoryByLoginId(const std::string &loginId)
 {
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
-    if (!conn) return json::array();
+    if (!conn)
+        return json::array();
 
+    // SQL 인젝션 방지
     char escaped[201] = {};
     mysql_real_escape_string(conn, escaped, loginId.c_str(), loginId.size());
 
-    std::string q = "SELECT o.order_id, o.store_id, o.rider_id, o.status, o.estimated_time, o.request_msg, o.order_date "
-                    "FROM orders o JOIN member m ON o.customer_id = m.member_id "
-                    "WHERE m.login_id = '" + std::string(escaped) + "' ORDER BY o.order_date DESC";
+    std::string q =
+        "SELECT "
+        "o.order_id, o.store_id, o.rider_id, o.status, o.estimated_time, "
+        "o.order_date, o.request_msg, s.store_name, mn.menu_name, "
+        "oi.quantity, (oi.price * oi.quantity) AS total_price "
+        "FROM orders o "
+        "JOIN member mb ON o.customer_id = mb.member_id "
+        "JOIN store s ON o.store_id = s.store_id "
+        "JOIN order_item oi ON o.order_id = oi.order_id "
+        "JOIN menu mn ON oi.menu_id = mn.menu_id "
+        "WHERE mb.login_id = '" +
+        std::string(escaped) + "' "
+                               "ORDER BY o.order_date DESC";
 
     if (mysql_query(conn, q.c_str()))
     {
@@ -189,44 +194,24 @@ json AdminService::getOrderHistoryByLoginId(const std::string &loginId)
 
     while ((row = mysql_fetch_row(res)))
     {
-        int orderId = row[0] ? std::stoi(row[0]) : 0;
-        json orderObj = {
-            {"order_id", orderId},
+        json itemObj = {
+            {"order_id", row[0] ? std::stoi(row[0]) : 0},
             {"store_id", row[1] ? std::stoi(row[1]) : 0},
             {"rider_id", row[2] ? std::stoi(row[2]) : 0},
             {"status", row[3] ? row[3] : ""},
             {"estimated_time", row[4] ? std::stoi(row[4]) : 0},
-            {"request_msg", row[5] ? row[5] : ""},
-            {"order_date", row[6] ? row[6] : ""},
-            {"items", json::array()}
-        };
-        ordersArr.push_back(orderObj);
+            {"order_date", row[5] ? row[5] : ""},
+            {"request_msg", row[6] ? row[6] : ""},
+            {"store_name", row[7] ? row[7] : ""},
+            {"menu_name", row[8] ? row[8] : ""},
+            {"quantity", row[9] ? std::stoi(row[9]) : 0},
+            {"total_price", row[10] ? std::stoi(row[10]) : 0}};
+
+        ordersArr.push_back(itemObj);
     }
+
     mysql_free_result(res);
-
-    for (auto& orderObj : ordersArr)
-    {
-        int orderId = orderObj["order_id"];
-        std::string iq = "SELECT order_item_id, menu_id, quantity, price FROM order_item WHERE order_id = " + std::to_string(orderId);
-        if (mysql_query(conn, iq.c_str()) == 0)
-        {
-            MYSQL_RES *ires = mysql_store_result(conn);
-            MYSQL_ROW irow;
-            json itemsArr = json::array();
-            while ((irow = mysql_fetch_row(ires)))
-            {
-                itemsArr.push_back({
-                    {"order_item_id", irow[0] ? std::stoi(irow[0]) : 0},
-                    {"menu_id", irow[1] ? std::stoi(irow[1]) : 0},
-                    {"quantity", irow[2] ? std::stoi(irow[2]) : 0},
-                    {"price", irow[3] ? std::stoi(irow[3]) : 0}
-                });
-            }
-            orderObj["items"] = itemsArr;
-            mysql_free_result(ires);
-        }
-    }
-
     DBConnectionPool::getInstance().releaseConnection(conn);
+
     return ordersArr;
 }
