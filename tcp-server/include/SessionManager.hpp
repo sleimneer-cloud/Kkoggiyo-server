@@ -39,6 +39,7 @@ public:
     void addSession(int fd, int type, const std::string &id);
     void removeSession(int fd);
     std::vector<int> getAdminFds();
+    std::vector<int> getRiderFds();
     int getFdByUserId(const std::string &targetId);
     std::string getUserIdByFd(int fd);
 };

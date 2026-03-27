@@ -30,6 +30,20 @@ std::vector<int> SessionManager::getAdminFds()
     return admins;
 }
 
+std::vector<int> SessionManager::getRiderFds()
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    std::vector<int> riders;
+    for (const auto &pair : activeSessions)
+    {
+        if (pair.second.clientType == 3) // 3번이 라이더 (ClientType::RIDER)
+        { 
+            riders.push_back(pair.first);
+        }
+    }
+    return riders;
+}
+
 int SessionManager::getFdByUserId(const std::string &targetId)
 {
     std::lock_guard<std::mutex> lock(mtx);

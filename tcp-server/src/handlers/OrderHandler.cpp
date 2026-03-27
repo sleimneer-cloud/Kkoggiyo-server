@@ -1,8 +1,44 @@
 #include "handlers/OrderHandler.hpp"
 #include "PacketHandler.hpp"
 #include "SessionManager.hpp"
+#include "DBConnectionPool.h" // DB 연결 풀 추가
 #include <iostream>
 #include <protocol.hpp>
+#include <mysql/mysql.h> // MySQL 추가
+
+// ---------------------------------------------------------
+// 🛠️ 추가된 헬퍼 함수: 이메일(login_id)로 숫자 member_id 조회
+// ---------------------------------------------------------
+static int getMemberIdByEmail(const std::string &email)
+{
+    MYSQL *conn = DBConnectionPool::getInstance().getConnection();
+    if (!conn)
+        return 0;
+
+    // member 테이블에서 login_id(이메일)로 member_id(PK) 조회
+    std::string q = "SELECT member_id FROM member WHERE login_id = '" + email + "'";
+
+    if (mysql_query(conn, q.c_str()))
+    {
+        std::cerr << "[OrderHandler] member_id 조회 실패: " << mysql_error(conn) << "\n";
+        DBConnectionPool::getInstance().releaseConnection(conn);
+        return 0;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int memberId = 0;
+
+    if (row && row[0])
+    {
+        memberId = std::stoi(row[0]);
+    }
+
+    mysql_free_result(res);
+    DBConnectionPool::getInstance().releaseConnection(conn);
+
+    return memberId;
+}
 
 OrderHandler::OrderHandler() // 이 핸들러는 OrderService와 NotificationService가 필요하므로, 생성자에서 초기화
     : orderSvc_(), notifySvc_(), placeOrderUC_(orderSvc_, notifySvc_), cancelOrderUC_(orderSvc_, notifySvc_), acceptOrderUC_(orderSvc_, notifySvc_), updateStatusUC_(orderSvc_, notifySvc_)
@@ -39,18 +75,25 @@ void OrderHandler::handle(int clientFd, int packetType, const json &j) // 패킷
 
 void OrderHandler::handlePlaceOrder(int clientFd, const json &j)
 {
-    int customerId = j.value("customer_id", 0);
-    int storeId = j.value("store_id", 0);
-    std::string requestMsg = j.value("request_msg", "");
+    // 1. 클라이언트에서 보낸 이메일 문자열 받기
+    std::string customerEmail = j.value("customerId", "");
+    int storeId = j.value("storeId", 0);
+    std::string requestMsg = j.value("requestMsg", "");
     json items = j.value("items", json::array());
 
+    // 2. 이메일로 진짜 숫자형 customerId 찾기
+    int customerId = getMemberIdByEmail(customerEmail);
+
+    // 3. 유효성 검사 (customerId가 0이면 조회 실패 또는 누락)
     if (customerId == 0 || storeId == 0 || items.empty())
     {
+        std::cerr << "[OrderHandler] 필수 항목 누락 또는 유저 조회 실패. 이메일: " << customerEmail << "\n";
         PacketHandler::sendPacket(clientFd, PacketType::SC_ORDER_NOTI,
-                                  {{"status", "fail"}, {"message", "필수 항목 누락"}});
+                                  {{"status", "fail"}, {"message", "필수 항목 누락 또는 유효하지 않은 유저입니다."}});
         return;
     }
 
+    // 4. 주문 생성
     int orderId = placeOrderUC_.execute(customerId, storeId, requestMsg, items);
 
     if (orderId == -1)

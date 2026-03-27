@@ -3,29 +3,29 @@
 #include <iostream>
 #include <mysql/mysql.h>
 
-int OrderService::createOrder(int customerId, int storeId,
-                              const std::string &requestMsg,
-                              const json &items)
+int OrderService::createOrder(int customerId, int storeId, const std::string &requestMsg, const json &items)
 {
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
     if (!conn)
         return -1;
 
-    // 1. orders INSERT
+    // 1. 트랜잭션 시작
+    mysql_query(conn, "START TRANSACTION");
+
     std::string q = "INSERT INTO orders (customer_id, store_id, request_msg, status) "
                     "VALUES (" +
                     std::to_string(customerId) + ", " + std::to_string(storeId) + ", '" + requestMsg + "', 'PENDING')";
 
     if (mysql_query(conn, q.c_str()))
     {
-        std::cerr << "[OrderService] createOrder 실패: " << mysql_error(conn) << "\n";
+        std::cerr << "[OrderService] orders INSERT 실패: " << mysql_error(conn) << "\n";
+        mysql_query(conn, "ROLLBACK"); // 롤백
         DBConnectionPool::getInstance().releaseConnection(conn);
         return -1;
     }
 
     int orderId = static_cast<int>(mysql_insert_id(conn));
 
-    // 2. order_item INSERT (items 배열 순회)
     for (const auto &item : items)
     {
         int menuId = item.value("menu_id", 0);
@@ -38,16 +38,15 @@ int OrderService::createOrder(int customerId, int storeId,
 
         if (mysql_query(conn, iq.c_str()))
         {
-            std::cerr << "[OrderService] order_item INSERT 실패: "
-                      << mysql_error(conn) << "\n";
-            // 주문 자체를 롤백
-            std::string del = "DELETE FROM orders WHERE order_id = " + std::to_string(orderId);
-            mysql_query(conn, del.c_str());
+            std::cerr << "[OrderService] order_item INSERT 실패: " << mysql_error(conn) << "\n";
+            mysql_query(conn, "ROLLBACK"); // 롤백
             DBConnectionPool::getInstance().releaseConnection(conn);
             return -1;
         }
     }
 
+    // 2. 모든 쿼리 성공 시 커밋
+    mysql_query(conn, "COMMIT");
     DBConnectionPool::getInstance().releaseConnection(conn);
     std::cout << "[OrderService] 주문 생성 완료. order_id: " << orderId << "\n";
     return orderId;

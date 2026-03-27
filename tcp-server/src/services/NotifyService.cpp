@@ -109,6 +109,27 @@ void NotifyService::notifyRider(int riderId, int orderId, const json& orderInfo)
     std::cout << "[NotifyService] 라이더(" << riderId << ")에 배달 요청 전송 완료\n";
 }
 
+void NotifyService::broadcastToRiders(int orderId, const json& orderInfo)
+{
+    std::vector<int> riderFds = SessionManager::getInstance().getRiderFds();
+    if (riderFds.empty())
+    {
+        std::cout << "[NotifyService] 현재 접속 중인 라이더가 없습니다.\n";
+        return;
+    }
+
+    json payload = orderInfo;
+    payload["order_id"] = orderId;
+    payload["message"]  = "조리가 완료되었습니다. 픽업을 요청합니다.";
+
+    // 접속 중인 모든 라이더에게 알림 전송 (콜)
+    for (int fd : riderFds)
+    {
+        PacketHandler::sendPacket(fd, PacketType::SC_ORDER_NOTI, payload);
+    }
+    std::cout << "[NotifyService] 접속 중인 라이더 " << riderFds.size() << "명에게 픽업 요청 발송 완료.\n";
+}
+
 #include <unistd.h>
 
 void NotifyService::notifyBan(int memberId, const std::string& reason)

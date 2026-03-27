@@ -19,10 +19,18 @@ bool UpdateStatusUseCase::execute(int orderId, const std::string& status)
     // READY      → 라이더에게 픽업 요청
     // DELIVERING → 고객에게 배달 시작 알림
     // COMPLETED  → 고객 + 가게 완료 알림
-    if (status == "READY" && riderId > 0)
+    if (status == "READY")
     {
-        notifySvc_.notifyRider(riderId, orderId,
-            {{"store_id", storeId}, {"message", "픽업 요청입니다."}});
+        if (riderId > 0)
+        {
+            notifySvc_.notifyRider(riderId, orderId,
+                {{"store_id", storeId}, {"message", "픽업 요청입니다."}});
+        }
+        else
+        {
+            notifySvc_.broadcastToRiders(orderId,
+                {{"store_id", storeId}, {"message", "조리가 완료되었습니다. 픽업을 요청합니다."}});
+        }
     }
     else if (status == "DELIVERING")
     {
