@@ -40,4 +40,5 @@ public:
     void removeSession(int fd);
     std::vector<int> getAdminFds();
     int getFdByUserId(const std::string &targetId);
+    std::string getUserIdByFd(int fd);
 };

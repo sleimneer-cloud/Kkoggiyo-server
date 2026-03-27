@@ -22,13 +22,14 @@ void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
 
     bool loginSuccess = false;
     std::string outName;
+    std::string outMsg;
 
     switch (static_cast<ClientType>(cType))
     {
     case ClientType::CUSTOMER:
     {
         CustomerAuthService customerSvc;                              
-        loginSuccess = customerSvc.processLogin(client_fd, j, outName);
+        loginSuccess = customerSvc.processLogin(client_fd, j, outName, outMsg);
         
         if (loginSuccess)
         {
@@ -45,7 +46,7 @@ void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
         {
             nlohmann::json res = {
                 {"status",  "fail"},
-                {"message", "로그인 정보가 올바르지 않거나 누락되었습니다."}
+                {"message", outMsg.empty() ? "로그인 정보가 올바르지 않거나 누락되었습니다." : outMsg}
             };
             PacketHandler::sendPacket(client_fd, PacketType::USER_LOGIN_RES, res);
         }
@@ -54,19 +55,19 @@ void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
     case ClientType::OWNER:
     {
         BossAuthService bossSvc;
-        loginSuccess = bossSvc.processLogin(client_fd, j);
+        loginSuccess = bossSvc.processLogin(client_fd, j, outMsg);
         break;
     }
     case ClientType::RIDER:
     {
         RiderAuthService riderSvc;
-        loginSuccess = riderSvc.processLogin(client_fd, j);
+        loginSuccess = riderSvc.processLogin(client_fd, j, outMsg);
         break;
     }
     case ClientType::ADMIN:
     {
         AdminAuthService adminSvc;
-        loginSuccess = adminSvc.processLogin(client_fd, j);
+        loginSuccess = adminSvc.processLogin(client_fd, j, outMsg);
         break;
     }
     default:
@@ -84,7 +85,7 @@ void AuthHandler::handleLogin(int client_fd, const nlohmann::json &j) const
     else
     {
         std::cerr << "[AuthHandler] 로그인 실패 (FD: " << client_fd << ")\n";
-        nlohmann::json res = {{"status", "fail"}, {"message", "로그인 정보가 올바르지 않거나 누락되었습니다."}};
+        nlohmann::json res = {{"status", "fail"}, {"message", outMsg.empty() ? "로그인 정보가 올바르지 않거나 누락되었습니다." : outMsg}};
         PacketHandler::sendPacket(client_fd, PacketType::SC_LOGIN_RES, res);
     }
 }

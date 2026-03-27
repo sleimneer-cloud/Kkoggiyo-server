@@ -108,3 +108,25 @@ void NotifyService::notifyRider(int riderId, int orderId, const json& orderInfo)
     PacketHandler::sendPacket(fd, PacketType::SC_ORDER_NOTI, payload);
     std::cout << "[NotifyService] 라이더(" << riderId << ")에 배달 요청 전송 완료\n";
 }
+
+#include <unistd.h>
+
+void NotifyService::notifyBan(int memberId, const std::string& reason)
+{
+    int fd = getMemberFd(memberId);
+    if (fd < 0) {
+        std::cerr << "[NotifyService] 유저 fd 없음. O/L 중이 아님. member_id: " << memberId << "\n";
+        return;
+    }
+
+    json payload = {
+        {"status", "fail"},
+        {"message", "관리자에 의해 강제 로그아웃 되었습니다. 사유: " + reason}
+    };
+    // 차단당했음을 로그인 실패/또는 공지용 응답으로 전송
+    PacketHandler::sendPacket(fd, PacketType::SC_LOGIN_RES, payload);
+    std::cout << "[NotifyService] 유저(" << memberId << ")에 차단 알림 전송 및 접속 강제 해제\n";
+
+    SessionManager::getInstance().removeSession(fd);
+    close(fd);
+}

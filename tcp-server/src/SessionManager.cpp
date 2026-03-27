@@ -42,3 +42,14 @@ int SessionManager::getFdByUserId(const std::string &targetId)
     }
     return -1; // 못 찾으면 -1 반환
 }
+
+std::string SessionManager::getUserIdByFd(int fd)
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    auto it = activeSessions.find(fd);
+    if (it != activeSessions.end())
+    {
+        return it->second.userId;
+    }
+    return "";
+}

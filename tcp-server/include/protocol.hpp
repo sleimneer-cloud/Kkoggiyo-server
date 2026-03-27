@@ -39,6 +39,9 @@ enum class PacketType : int32_t // 4바이트 정수형으로 저장
     CS_ORDER_READY = 307,  // 가게 -> 서버: 음식 준비 완료
     CS_ORDER_DONE = 308,   // 라이더 -> 서버: 주문 배달 완료
 
+    CS_STORE_OPEN_REQ = 4910, // 클라 → 서버 : 가게 오픈 알림
+    SC_STORE_OPEN_RES = 4911, // 서버 → 클라 : 가게 오픈 응답
+
     // [고객 파트]
     USER_REGISTER_REQ = 2001,    // 클라 → 서버 : 회원가입 요청 (인증번호 발송 요청)
     USER_REGISTER_RES = 2002,    // 서버 → 클라 : 회원가입 응답 (인증번호 발송 완료)

@@ -85,36 +85,41 @@ bool CustomerAuthService::processRegister(const nlohmann::json &payload)
 // ---------------------------------------------------------
 // 2. 로그인
 // ---------------------------------------------------------
-bool CustomerAuthService::processLogin(int /*fd*/, const nlohmann::json &payload, std::string &outName)
+bool CustomerAuthService::processLogin(int /*fd*/, const nlohmann::json &payload, std::string &outName, std::string &outMsg)
 {
-    if (!payload.contains("userId") || !payload.contains("password"))
+    if (!payload.contains("userId") || !payload.contains("password")) {
+        outMsg = "로그인 정보가 누락되었습니다.";
         return false;
+    }
 
     std::string userId        = payload["userId"];
-    std::string inputPassword = payload["password"]; // 클라이언트 SHA256 해싱값
+    std::string inputPassword = payload["password"];
 
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
-    if (!conn)
+    if (!conn) {
+        outMsg = "DB 연결 실패";
         return false;
+    }
     
+    std::string query = "SELECT password, name, is_banned FROM member WHERE login_id = ? AND role = 1";
     std::vector<std::string> params = {userId};
-    std::string dbPassword; // DB에 저장된 bcrypt 해시
-
-    std::string pwQuery =
-        "SELECT password FROM member WHERE login_id = ? AND role = 1";
-    std::string nameQuery =
-        "SELECT name FROM member WHERE login_id = ? AND role = 1";
 
     bool isSuccess = false;
+    std::vector<std::vector<std::string>> rows;
 
-    if (DBHelper::executeSelectOneString(conn, pwQuery, params, dbPassword))
+    if (DBHelper::executeSelectMultipleRows(conn, query, params, {255, 50, 10}, rows) && !rows.empty())
     {
-        std::cout << "[DEBUG] input : " << inputPassword << "\n";
-        std::cout << "[DEBUG] db    : " << dbPassword << "\n";
-    
-        DBHelper::executeSelectOneString(conn, nameQuery, params, outName);
-        // ✅ 수정: == 단순 비교 → bcryptVerify로 검증
-        // crypt(inputPassword, dbPassword의 salt) 결과가 dbPassword와 같으면 일치
+        std::string dbPassword = rows[0][0];
+        outName = rows[0][1];
+        int isBanned = std::stoi(rows[0][2]);
+
+        if (isBanned == 1) {
+            std::cout << "[CustomerAuthService] 로그인 실패 (차단된 유저): " << userId << "\n";
+            outMsg = "관리자에 의해 정지(차단)된 계정입니다.";
+            DBConnectionPool::getInstance().releaseConnection(conn);
+            return false;
+        }
+
         if (bcryptVerify(inputPassword, dbPassword))
         {
             std::cout << "[CustomerAuthService] 로그인 성공: " << userId << "\n";
@@ -123,11 +128,13 @@ bool CustomerAuthService::processLogin(int /*fd*/, const nlohmann::json &payload
         else
         {
             std::cout << "[CustomerAuthService] 로그인 실패 (비밀번호 불일치): " << userId << "\n";
+            outMsg = "아이디/비밀번호가 일치하지 않습니다.";
         }
     }
     else
     {
         std::cout << "[CustomerAuthService] 로그인 실패 (존재하지 않는 아이디): " << userId << "\n";
+        outMsg = "해당 아이디를 찾을 수 없습니다.";
     }
 
     DBConnectionPool::getInstance().releaseConnection(conn);

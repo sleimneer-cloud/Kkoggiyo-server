@@ -17,4 +17,7 @@ public:
 
     // 라이더에게 배달 요청 알림
     void notifyRider(int riderId, int orderId, const json& orderInfo);
+
+    // [추가] 유저에게 차단 알림 및 강제 종료
+    void notifyBan(int memberId, const std::string& reason);
 };

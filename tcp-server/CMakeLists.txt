@@ -43,6 +43,8 @@ add_executable(server
     src/usecase/AcceptOrderUseCase.cpp
     src/usecase/UpdateStatusUseCase.cpp
     src/handlers/OrderHandler.cpp
+    src/handlers/StoreHandler.cpp
+    src/services/StoreService.cpp
 )
 
 target_include_directories(server PRIVATE include)

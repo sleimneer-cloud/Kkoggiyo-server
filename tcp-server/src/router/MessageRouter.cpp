@@ -8,6 +8,7 @@
 #include "handlers/ChatHandler.hpp"
 #include "handlers/OrderHandler.hpp"
 #include "handlers/AdminHandler.hpp"
+#include "handlers/StoreHandler.hpp"
 
 using json = nlohmann::json;
 
@@ -68,6 +69,16 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
             break;
         case PacketType::CS_ADMIN_SEARCH_HISTORY:
             adminHandler_.handleSearchHistory(client_fd, j);
+            break;
+        case PacketType::CS_ADMIN_REFUND_REQ:
+            adminHandler_.handleRefund(client_fd, j);
+            break;
+        case PacketType::CS_ADMIN_BAN_USER:
+            adminHandler_.handleBanUser(client_fd, j);
+            break;
+
+        case PacketType::CS_STORE_OPEN_REQ: // 4910
+            StoreHandler{}.handleStoreOpenReq(client_fd, j);
             break;
 
         // ── 주문 관련 ─────────────────────────────────── ← 추가

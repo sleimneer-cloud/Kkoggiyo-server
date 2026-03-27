@@ -90,3 +90,89 @@ void AdminHandler::handleSearchHistory(int clientFd, const json &j)
     PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_SEARCH_HISTORY_RES,
                               {{"status", "success"}, {"data", history}});
 }
+
+void AdminHandler::handleRefund(int clientFd, const json &j)
+{
+    std::string targetIdStr = j.value("targetId", "");
+    std::string amountStr = j.value("amount", "0");
+
+    if (targetIdStr.empty()) {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_REFUND_RES,
+                                  {{"status", "fail"}, {"message", "targetId 누락"}});
+        return;
+    }
+
+    int orderId = 0;
+    try {
+        orderId = std::stoi(targetIdStr);
+    } catch (...) {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_REFUND_RES,
+                                  {{"status", "fail"}, {"message", "targetId 형식이 올바르지 않습니다."}});
+        return;
+    }
+
+    // 관리자 ID 찾기
+    std::string email = SessionManager::getInstance().getUserIdByFd(clientFd);
+    int adminId = adminSvc_.getAdminIdByEmail(email);
+
+    std::string outMsg;
+    int customerId = 0;
+    int storeId = 0;
+    bool success = adminSvc_.processRefund(orderId, amountStr, adminId, outMsg, customerId, storeId);
+
+    if (success) {
+        // 알림 전송 (고객에게)
+        notifySvc_.notifyCustomer(customerId, orderId, "CANCELLED");
+        
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_REFUND_RES,
+                                  {{"status", "success"}, {"message", outMsg}});
+    } else {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_REFUND_RES,
+                                  {{"status", "fail"}, {"message", outMsg}});
+    }
+}
+
+void AdminHandler::handleBanUser(int clientFd, const json &j)
+{
+    std::string targetIdStr = j.value("targetId", "");
+    std::string reason = j.value("reason", "");
+
+    if (targetIdStr.empty()) {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_BAN_USER_RES,
+                                  {{"status", "fail"}, {"message", "targetId 누락"}});
+        return;
+    }
+
+    int memberId = 0;
+    try {
+        memberId = std::stoi(targetIdStr);
+    } catch (...) {
+        // 숫자가 아닌 경우 login_id로 간주하여 조회 시도
+        json userInfo = adminSvc_.getUserByLoginId(targetIdStr);
+        if (!userInfo.empty() && userInfo.contains("RES_member_id")) {
+            memberId = userInfo["RES_member_id"].get<int>();
+        } else {
+            PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_BAN_USER_RES,
+                                      {{"status", "fail"}, {"message", "존재하지 않는 로그인 아이디입니다: " + targetIdStr}});
+            return;
+        }
+    }
+
+    // 관리자 ID 찾기
+    std::string email = SessionManager::getInstance().getUserIdByFd(clientFd);
+    int adminId = adminSvc_.getAdminIdByEmail(email);
+
+    std::string outMsg;
+    bool success = adminSvc_.processBanUser(memberId, reason, adminId, outMsg);
+
+    if (success) {
+        // 차단 알림 및 연결 해제
+        notifySvc_.notifyBan(memberId, reason);
+
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_BAN_USER_RES,
+                                  {{"status", "success"}, {"message", outMsg}});
+    } else {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ADMIN_BAN_USER_RES,
+                                  {{"status", "fail"}, {"message", outMsg}});
+    }
+}

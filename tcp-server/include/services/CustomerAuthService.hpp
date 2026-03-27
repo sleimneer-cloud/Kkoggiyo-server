@@ -22,7 +22,7 @@ public:
     ~CustomerAuthService() = default;
 
     // 고객 로그인
-    bool processLogin(int fd, const nlohmann::json &payload, std::string &outName);
+    bool processLogin(int fd, const nlohmann::json &payload, std::string &outName, std::string &outMsg);
     // 회원가입 시 인증번호 발송
     bool processRegister(const nlohmann::json &payload);    
     // 인증번호 확인 및 DB 저장

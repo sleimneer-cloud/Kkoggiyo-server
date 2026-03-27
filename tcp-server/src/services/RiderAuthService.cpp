@@ -91,27 +91,40 @@ bool RiderAuthService::processRegister(const nlohmann::json &payload)
 // ---------------------------------------------------------
 // 2. 로그인 (SELECT + bcrypt 검증)
 // ---------------------------------------------------------
-bool RiderAuthService::processLogin(int fd, const nlohmann::json &payload)
+bool RiderAuthService::processLogin(int fd, const nlohmann::json &payload, std::string &outMsg)
 {
-    if (!payload.contains("userId") || !payload.contains("password"))
+    if (!payload.contains("userId") || !payload.contains("password")) {
+        outMsg = "로그인 정보가 누락되었습니다.";
         return false;
+    }
 
     std::string userId   = payload["userId"];
-    std::string inputPw  = payload["password"]; // 클라이언트 SHA256 해싱값
+    std::string inputPw  = payload["password"];
 
     MYSQL *conn = DBConnectionPool::getInstance().getConnection();
-    if (!conn)
+    if (!conn) {
+        outMsg = "DB 연결 실패";
         return false;
+    }
 
-    // role = 3 (RIDER) 인 계정만 조회 — 다른 role로 라이더 로그인 불가
-    std::string query = "SELECT password FROM member WHERE login_id = ? AND role = 3";
+    std::string query = "SELECT password, is_banned FROM member WHERE login_id = ? AND role = 3";
     std::vector<std::string> params = {userId};
-    std::string dbPassword;
 
     bool success = false;
+    std::vector<std::vector<std::string>> rows;
 
-    if (DBHelper::executeSelectOneString(conn, query, params, dbPassword))
+    if (DBHelper::executeSelectMultipleRows(conn, query, params, {255, 10}, rows) && !rows.empty())
     {
+        std::string dbPassword = rows[0][0];
+        int isBanned = std::stoi(rows[0][1]);
+
+        if (isBanned == 1) {
+            std::cout << "[RiderAuthService] 로그인 실패 (차단된 유저): " << userId << "\n";
+            outMsg = "관리자에 의해 정지(차단)된 계정입니다.";
+            DBConnectionPool::getInstance().releaseConnection(conn);
+            return false;
+        }
+
         if (bcryptVerify(inputPw, dbPassword))
         {
             std::cout << "[RiderAuthService] 라이더 로그인 성공: " << userId << "\n";
@@ -120,11 +133,13 @@ bool RiderAuthService::processLogin(int fd, const nlohmann::json &payload)
         else
         {
             std::cout << "[RiderAuthService] 로그인 실패 (비밀번호 불일치): " << userId << "\n";
+            outMsg = "아이디/비밀번호가 일치하지 않습니다.";
         }
     }
     else
     {
         std::cout << "[RiderAuthService] 로그인 실패 (존재하지 않는 아이디): " << userId << "\n";
+        outMsg = "존재하지 않는 아이디입니다.";
     }
 
     DBConnectionPool::getInstance().releaseConnection(conn);
