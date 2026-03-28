@@ -81,6 +81,20 @@ enum class PacketType : int32_t // 4바이트 정수형으로 저장
     USER_ORDER_STATUS_REQ = 2031, // 클라 → 서버 : 주문 상태 확인
     USER_ORDER_STATUS_RES = 2032, // 서버 → 클라 : 주문 상태 응답
 
+    // [사장님/라이더 고도화]
+    CS_OWNER_ORDER_LIST_REQ = 310,  // 사장님 → 서버 : 상세 주문 목록 요청
+    SC_OWNER_ORDER_LIST_RES = 311,  // 서버 → 사장님 : 상세 주문 목록 응답
+    CS_RIDER_ORDER_LIST_REQ = 320,  // 라이더 → 서버 : 배달 가능 주문 목록 요청
+    SC_RIDER_ORDER_LIST_RES = 321,  // 서버 → 라이더 : 배달 가능 주문 목록 응답
+    CS_ORDER_ASSIGN_REQ = 322,      // 라이더 → 서버 : 배차 확정 요청
+
+    CS_STORE_REGISTER_REQ = 4940,   // 사장님 → 서버 : 가게 등록 요청
+    SC_STORE_REGISTER_RES = 4941,   // 서버 → 사장님 : 가게 등록 응답
+
+    CS_MENU_REGISTER_REQ = 4950,    // 사장님 → 서버 : 메뉴 등록 요청
+    SC_MENU_REGISTER_RES = 4951,    // 서버 → 사장님 : 메뉴 등록 응답
+    CS_OWNER_STORE_LIST_REQ = 4960, // 사장님 → 서버 : 내 가게 목록 요청
+    SC_OWNER_STORE_LIST_RES = 4961, // 서버 → 사장님 : 내 가게 목록 응답
 };
 
 // 3. 클라이언트 종류 (관리자, 고객, 가게, 라이더 구분용)

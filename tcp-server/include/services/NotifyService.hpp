@@ -23,4 +23,7 @@ public:
 
     // [추가] 유저에게 차단 알림 및 강제 종료
     void notifyBan(int memberId, const std::string& reason);
+
+    // [추가] 사장님과 고객에게 배차 완료 알림
+    void notifyDispatchComplete(int orderId);
 };

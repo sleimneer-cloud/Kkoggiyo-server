@@ -105,7 +105,7 @@ bool BossAuthService::processRegister(const nlohmann::json &payload)
     if (!payload.contains("userId")       || !payload.contains("password") ||
         !payload.contains("userName")     || !payload.contains("phone")    ||
         !payload.contains("storeName")    || !payload.contains("storeAddress") ||
-        !payload.contains("licnese"))
+        !payload.contains("license"))
     {
         return false;
     }
@@ -117,7 +117,8 @@ bool BossAuthService::processRegister(const nlohmann::json &payload)
     // ▼ 수정: 가게 정보 추출 추가
     std::string storeName    = payload["storeName"];
     std::string storeAddress = payload["storeAddress"];
-    std::string license      = payload["licnese"]; // 클라이언트 키 오타와 일치시킴
+    // license 필드 (기존 licnese 오타 수정됨)
+    std::string license      = payload["license"];
 
     // 서버에서 bcrypt로 한 번 더 강력하게 해싱
     std::string hashedPassword = bcryptHash(password);

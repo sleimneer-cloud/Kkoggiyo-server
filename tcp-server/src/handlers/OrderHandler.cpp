@@ -68,6 +68,19 @@ void OrderHandler::handle(int clientFd, int packetType, const json &j) // 패킷
     case PacketType::CS_ORDER_DONE:
         handleDone(clientFd, j);
         break;
+
+    case PacketType::CS_OWNER_ORDER_LIST_REQ:
+        handleOwnerOrderList(clientFd, j);
+        break;
+
+    case PacketType::CS_RIDER_ORDER_LIST_REQ:
+        handleRiderOrderList(clientFd, j);
+        break;
+
+    case PacketType::CS_ORDER_ASSIGN_REQ:
+        handleRiderAssign(clientFd, j);
+        break;
+
     default:
         std::cerr << "[OrderHandler] 알 수 없는 패킷: " << packetType << "\n";
     }
@@ -195,4 +208,65 @@ void OrderHandler::handleReady(int clientFd, const json &j)
                               {{"status", ok ? "success" : "fail"},
                                {"order_id", orderId},
                                {"message", ok ? "조리 완료 처리됨. 라이더를 호출합니다." : "상태 변경 실패"}});
+}
+
+void OrderHandler::handleOwnerOrderList(int clientFd, const json &j)
+{
+    std::string loginId = SessionManager::getInstance().getUserIdByFd(clientFd);
+    if (loginId.empty()) return;
+
+    // 만약 클라이언트가 요정한 특정 storeId가 있다면 그것만 조회
+    int requestedStoreId = j.value("storeId", 0);
+    json allOrders = json::array();
+
+    if (requestedStoreId != 0) {
+        allOrders = orderSvc_.getOrdersWithItemsByStore(requestedStoreId);
+    } else {
+        // 특정 ID가 없다면 사장님의 모든 가게 주문을 합쳐서 반환
+        std::vector<int> storeIds = orderSvc_.getStoreIdsByOwnerLoginId(loginId);
+        if (storeIds.empty()) {
+            PacketHandler::sendPacket(clientFd, PacketType::SC_OWNER_ORDER_LIST_RES,
+                                      {{"status", "fail"}, {"message", "등록된 가게가 없습니다."}});
+            return;
+        }
+
+        for (int sid : storeIds) {
+            json storeOrders = orderSvc_.getOrdersWithItemsByStore(sid);
+            for (const auto& o : storeOrders) {
+                allOrders.push_back(o);
+            }
+        }
+    }
+
+    PacketHandler::sendPacket(clientFd, PacketType::SC_OWNER_ORDER_LIST_RES,
+                              {{"status", "success"}, {"orders", allOrders}});
+}
+
+void OrderHandler::handleRiderOrderList(int clientFd, const json &j)
+{
+    json orders = orderSvc_.getAvailableOrdersForRider();
+    PacketHandler::sendPacket(clientFd, PacketType::SC_RIDER_ORDER_LIST_RES,
+                              {{"status", "success"}, {"orders", orders}});
+}
+
+void OrderHandler::handleRiderAssign(int clientFd, const json &j)
+{
+    int orderId = j.value("order_id", 0);
+    std::string riderLoginId = SessionManager::getInstance().getUserIdByFd(clientFd);
+
+    if (orderId == 0 || riderLoginId.empty()) return;
+
+    // 라이더 member_id 조회
+    int riderId = getMemberIdByEmail(riderLoginId);
+    if (riderId == 0) return;
+
+    if (orderSvc_.assignRiderToOrder(orderId, riderId)) {
+        // 성공 시 사장님과 고객에게 배차 완료 알림
+        notifySvc_.notifyDispatchComplete(orderId);
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ORDER_STATUS,
+                                  {{"status", "success"}, {"order_id", orderId}, {"message", "배차가 확정되었습니다."}});
+    } else {
+        PacketHandler::sendPacket(clientFd, PacketType::SC_ORDER_STATUS,
+                                  {{"status", "fail"}, {"message", "배차 실패"}});
+    }
 }

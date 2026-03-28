@@ -28,14 +28,36 @@ static void recvThread(NetClient *client)
         {
             std::cout << "\n[관리자] " << j.value("message", "") << "\n> " << std::flush;
         }
+        else if (type == static_cast<int>(PacketType::SC_RIDER_ORDER_LIST_RES))
+        {
+            std::cout << "\n=== [배달 가능 주문 목록] ===\n";
+            auto orders = j.value("orders", nlohmann::json::array());
+            if (orders.empty()) {
+                std::cout << "현재 배달 가능한 주문이 없습니다.\n";
+            } else {
+                for (const auto& o : orders) {
+                    std::cout << "------------------------------------------\n";
+                    std::cout << "주문번호: " << o.value("order_id", 0) 
+                              << " | 가게: " << o.value("store_name", "") 
+                              << " | 상태: " << o.value("status", "") << "\n";
+                    std::cout << "주문일시: " << o.value("order_date", "") << "\n";
+                }
+                std::cout << "------------------------------------------\n";
+            }
+            std::cout << "> " << std::flush;
+        }
         else if (type == static_cast<int>(PacketType::SC_ORDER_NOTI))
         {
-            // 나중에 배달 콜(주문 알림)이 올 때를 대비한 처리
-            std::cout << "\n🔔 [새 배달 콜!] " << j.dump() << "\n> " << std::flush;
+            std::cout << "\n🔔 [새로운 배달 알람!] \n" << j.dump(4) << "\n> " << std::flush;
+        }
+        else if (type == static_cast<int>(PacketType::SC_ORDER_STATUS))
+        {
+            std::cout << "\n📢 [주문 상태 변경] " << j.value("message", "") 
+                      << " (주문ID: " << j.value("order_id", 0) << ")\n> " << std::flush;
         }
         else
         {
-            std::cout << "\n[서버] " << j.dump() << "\n> " << std::flush;
+            std::cout << "\n[서버 응답] " << j.dump() << "\n> " << std::flush;
         }
     }
     g_running = false;
@@ -161,43 +183,68 @@ int main()
     {
         std::cout << "\n=== 라이더 메뉴 ===\n";
         std::cout << "1. 관리자 채팅 (문의하기)\n";
-        std::cout << "2. 종료\n";
+        std::cout << "2. 배달 가능 주문 목록 보기\n";
+        std::cout << "3. 배차 신청 (주문 선택)\n";
+        std::cout << "4. 종료\n";
         std::cout << "선택: ";
 
         std::string choice;
         if (!std::getline(std::cin, choice))
             break;
-        if (choice == "2")
+        if (choice == "4")
             break;
 
-        // ── 채팅 ──────────────────────────────────────────
-        if (choice == "1")
-        {
-            std::cout << "\n--- 관리자 채팅 (빈 줄 입력 시 종료) ---\n";
-            while (g_running && client.isConnected())
+        try {
+            // ── 채팅 ──────────────────────────────────────────
+            if (choice == "1")
             {
-                std::cout << "> ";
-                std::string msg;
-                if (!std::getline(std::cin, msg))
+                std::cout << "\n--- 관리자 채팅 (빈 줄 입력 시 종료) ---\n";
+                while (g_running && client.isConnected())
                 {
-                    g_running = false;
-                    break;
-                }
-                if (msg.empty())
-                    break;
+                    std::cout << "> ";
+                    std::string msg;
+                    if (!std::getline(std::cin, msg))
+                    {
+                        g_running = false;
+                        break;
+                    }
+                    if (msg.empty())
+                        break;
 
-                nlohmann::json chatReq = {
-                    {"clientType", static_cast<int>(ClientType::RIDER)},
-                    {"senderId", userId},
-                    {"message", msg}};
+                    nlohmann::json chatReq = {
+                        {"clientType", static_cast<int>(ClientType::RIDER)},
+                        {"senderId", userId},
+                        {"message", msg}};
 
-                if (!client.sendPacket(static_cast<int>(PacketType::CS_CHAT_REQ), chatReq))
-                {
-                    std::cerr << "전송 실패\n";
-                    g_running = false;
-                    break;
+                    if (!client.sendPacket(static_cast<int>(PacketType::CS_CHAT_REQ), chatReq))
+                    {
+                        std::cerr << "전송 실패\n";
+                        g_running = false;
+                        break;
+                    }
                 }
             }
+            // ── 주문 조회 ───────────────────────────────────
+            else if (choice == "2")
+            {
+                client.sendPacket(static_cast<int>(PacketType::CS_RIDER_ORDER_LIST_REQ), {});
+                std::cout << "사용 가능한 주문 목록을 요청했습니다.\n";
+            }
+            // ── 배차 신청 ───────────────────────────────────
+            else if (choice == "3")
+            {
+                std::string orderIdStr;
+                std::cout << "배차받을 주문 ID: ";
+                std::getline(std::cin, orderIdStr);
+
+                nlohmann::json assignReq = {{"order_id", std::stoi(orderIdStr)}};
+                client.sendPacket(static_cast<int>(PacketType::CS_ORDER_ASSIGN_REQ), assignReq);
+            }
+        } catch (const nlohmann::json::exception &e) {
+            std::cerr << "\n[오류] 데이터 처리 중 예외 발생: " << e.what() << "\n";
+            std::cin.clear();
+        } catch (const std::exception &e) {
+            std::cerr << "\n[오류] 입력 오류: " << e.what() << "\n";
         }
     }
 

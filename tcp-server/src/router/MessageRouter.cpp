@@ -82,6 +82,15 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
         case PacketType::CS_STORE_OPEN_REQ: // 4910
             storeHandler_.handleStoreOpenReq(client_fd, j);
             break;
+        case PacketType::CS_STORE_REGISTER_REQ: // 4940
+            storeHandler_.handleStoreRegister(client_fd, j);
+            break;
+        case PacketType::CS_OWNER_STORE_LIST_REQ: // 4960
+            storeHandler_.handleOwnerStoreList(client_fd, j);
+            break;
+        case PacketType::CS_MENU_REGISTER_REQ: // 4950
+            menuHandler_.handleMenuRegister(client_fd, j);
+            break;
         case PacketType::USER_STORE_LIST_REQ:
             clientHandler_.handleGetStores(client_fd, j);
             break;
@@ -90,11 +99,15 @@ void MessageRouter::route(int client_fd, const std::string &jsonStr) const
             break;
 
                 // ── 주문 관련 ─────────────────────────────────── ← 추가
-        case PacketType::CS_ORDER_REQ:    // 300
-        case PacketType::CS_ORDER_CANCEL: // 304
-        case PacketType::CS_ORDER_ACCEPT: // 305
-        case PacketType::CS_ORDER_PICKUP: // 306
-        case PacketType::CS_ORDER_DONE:   // 307
+        case PacketType::CS_ORDER_REQ:         // 300
+        case PacketType::CS_ORDER_CANCEL:      // 304
+        case PacketType::CS_ORDER_ACCEPT:      // 305
+        case PacketType::CS_ORDER_PICKUP:      // 306
+        case PacketType::CS_ORDER_READY:       // 307
+        case PacketType::CS_ORDER_DONE:        // 308
+        case PacketType::CS_OWNER_ORDER_LIST_REQ: // 310
+        case PacketType::CS_RIDER_ORDER_LIST_REQ: // 320
+        case PacketType::CS_ORDER_ASSIGN_REQ:    // 322
             OrderHandler{}.handle(client_fd, msgType, j);
             break;
 

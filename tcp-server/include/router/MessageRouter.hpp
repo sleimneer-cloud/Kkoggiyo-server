@@ -7,6 +7,7 @@
 #include "handlers/AdminHandler.hpp"
 #include "handlers/ClientHandler.hpp"
 #include "handlers/StoreHandler.hpp"
+#include "handlers/MenuHandler.hpp"
 
 class MessageRouter
 {
@@ -20,4 +21,5 @@ private:
     mutable AdminHandler adminHandler_;
     ClientHandler clientHandler_;
     mutable StoreHandler storeHandler_;
+    mutable MenuHandler menuHandler_;
 };

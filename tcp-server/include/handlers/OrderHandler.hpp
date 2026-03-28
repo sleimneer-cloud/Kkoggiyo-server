@@ -34,4 +34,8 @@ private:
     void handlePickup(int clientFd, const json &j);     // 306
     void handleReady(int clientFd, const json &j);      // 307
     void handleDone(int clientFd, const json &j);       // 308
+
+    void handleOwnerOrderList(int clientFd, const json &j); // 310
+    void handleRiderOrderList(int clientFd, const json &j); // 320
+    void handleRiderAssign(int clientFd, const json &j);    // 322
 };

@@ -10,7 +10,7 @@ static int getStoreFd(int storeId)
     if (!conn) return -1;
 
     std::string q = "SELECT m.login_id FROM store s "
-                    "JOIN member m ON s.owner_id = m.login_id "
+                    "JOIN member m ON s.owner_id = m.member_id "
                     "WHERE s.store_id = " + std::to_string(storeId);
 
     if (mysql_query(conn, q.c_str()))
@@ -150,4 +150,46 @@ void NotifyService::notifyBan(int memberId, const std::string& reason)
 
     SessionManager::getInstance().removeSession(fd);
     close(fd);
+}
+
+void NotifyService::notifyDispatchComplete(int orderId)
+{
+    // 1. 주문 정보 조회 (가게 ID, 고객 ID 필요)
+    MYSQL* conn = DBConnectionPool::getInstance().getConnection();
+    if (!conn) return;
+
+    std::string q = "SELECT customer_id, store_id FROM orders WHERE order_id = " + std::to_string(orderId);
+    if (mysql_query(conn, q.c_str())) {
+        DBConnectionPool::getInstance().releaseConnection(conn);
+        return;
+    }
+
+    MYSQL_RES* res = mysql_store_result(conn);
+    MYSQL_ROW  row = mysql_fetch_row(res);
+    int customerId = row ? std::stoi(row[0]) : 0;
+    int storeId    = row ? std::stoi(row[1]) : 0;
+    mysql_free_result(res);
+    DBConnectionPool::getInstance().releaseConnection(conn);
+
+    if (customerId == 0 || storeId == 0) return;
+
+    json payload = {
+        {"order_id", orderId},
+        {"status", "DISPATCHED"},
+        {"message", "라이더 배차가 완료되었습니다. 곧 픽업이 시작됩니다."}
+    };
+
+    // 2. 사장님에게 알림
+    int storeFd = getStoreFd(storeId);
+    if (storeFd >= 0) {
+        PacketHandler::sendPacket(storeFd, PacketType::SC_ORDER_STATUS, payload);
+    }
+
+    // 3. 고객에게 알림
+    int customerFd = getMemberFd(customerId);
+    if (customerFd >= 0) {
+        PacketHandler::sendPacket(customerFd, PacketType::SC_ORDER_STATUS, payload);
+    }
+
+    std::cout << "[NotifyService] 주문(" << orderId << ") 배차 완료 알림(사장/고객) 전송 완료\n";
 }
