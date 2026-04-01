@@ -1,0 +1,14 @@
+
+
+2. 서버 열기
+
+chmod +x start.sh
+./start.sh
+
+
+
+http://10.10.10.113:8000/docs
+
+
+
+
