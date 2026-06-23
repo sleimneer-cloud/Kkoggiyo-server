@@ -299,18 +299,8 @@
 
 ## 🟡 핵심 기능 미구현
 
-- [ ] **주문 기능** — `protocol.hpp`에 타입 번호(300~303)는 정의되어 있으나 Handler/Service가 없습니다.
-  - `OrderHandler`, `OrderService`, `RiderService` 생성 필요
-  - `MessageRouter`의 switch문에 `case PacketType::CS_ORDER_REQ:` 추가 필요
-
-- [ ] **사장님 회원가입** — `BossAuthService::processRegister()`가 `return false`만 하는 빈 함수입니다.
-
 - [ ] **라이더 로그인/인증** — `AuthHandler`에 `ClientType::RIDER` 케이스가 주석 처리되어 있습니다.
 
-- [ ] **관리자 로그인 검증** — 현재 관리자는 비밀번호 검증 없이 무조건 로그인 성공 처리됩니다.
-  ```cpp
-  case ClientType::ADMIN:
-      loginSuccess = true; // ← DB 검증 없음
   ```
 
 ## 🟢 개선 사항
