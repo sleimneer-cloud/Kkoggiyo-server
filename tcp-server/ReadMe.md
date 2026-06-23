@@ -310,8 +310,8 @@
 - [x] **WorkQueue PacketType 로그** — 현재 WorkQueue 로그에 `PacketType: unknown`으로 표시됩니다. `item.jsonStr`을 파싱해서 type 값을 출력하면 디버깅이 편해집니다.
 
 
-- [ ] **설정 파일 분리** — DB 접속 정보(IP, 비밀번호)가 `server.cpp`에 하드코딩되어 있습니다. `.env` 파일이나 config 구조체로 분리하는 것을 권장합니다.
+- [x] **설정 파일 분리** — DB 접속 정보(IP, 비밀번호)가 `server.cpp`에 하드코딩되어 있습니다. `.env` 파일이나 config 구조체로 분리하는 것을 권장합니다.
   ```cpp
   // 현재 (하드코딩)
-  DBConnectionPool::getInstance().init("10.10.10.116", "HS", "1234", "delivery", 3306, 10);
+  DBConnectionPool::getInstance().init("10.10.10.116", "HS", "pw", "delivery", 3306, 10);
   ```
